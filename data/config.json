@@ -1,0 +1,15 @@
+{
+  "publishedGoogleSheetCsvUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pub?output=csv",
+  "publishedGoogleSheetWebUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pubhtml",
+  "googleSheetsWebhookUrl": "https://script.google.com/macros/s/AKfycbwTMT789GYddjaWkhWDQKQNM5eukC3Mdgwwr1d8g26xXsHY2Se3RGPUg8u4CrnGexNL/exec",
+  "autoSyncEnabled": true,
+  "lastSyncAttempt": "2026-10-22T12:49:38.891Z",
+  "lastSyncResult": {
+    "referenceCode": "MWA-BK-202610-4164",
+    "success": false,
+    "status": 401,
+    "statusText": "Unauthorized",
+    "error": "Google Apps Script Webhook returned 401/403 Unauthorized (Google Sign-In required). In your Google Apps Script project, navigate to Deploy > Manage Deployments, click Edit, and ensure \"Who has access\" is set to \"Anyone\".",
+    "timestamp": "2026-10-22T12:49:38.891Z"
+  }
+}

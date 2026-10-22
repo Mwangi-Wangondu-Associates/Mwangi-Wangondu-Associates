@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Practice Portal & Google Sheets Sync | Mwangi Wangondu & Associates</title>
+  <meta name="description" content="Mwangi Wangondu & Associates practice desk for viewing scheduled consultations, client inquiries, and automated Google Sheets sync.">
+  <link rel="alternate" type="text/csv" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pub?output=csv" title="Google Sheets Published CSV">
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Global Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .gsi-material-button {
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      -webkit-appearance: none;
+      background-color: WHITE;
+      background-image: none;
+      border: 1px solid #747775;
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: #1f1f1f;
+      cursor: pointer;
+      font-family: 'Roboto', arial, sans-serif;
+      font-size: 14px;
+      height: 40px;
+      letter-spacing: 0.25px;
+      outline: none;
+      overflow: hidden;
+      padding: 0 12px;
+      position: relative;
+      text-align: center;
+      transition: background-color .218s, border-color .218s, box-shadow .218s;
+      vertical-align: middle;
+      white-space: nowrap;
+      width: auto;
+      max-width: 400px;
+      min-width: min-content;
+      display: inline-flex;
+      align-items: center;
+    }
+    .gsi-material-button .gsi-material-button-icon {
+      height: 20px;
+      margin-right: 12px;
+      min-width: 20px;
+      width: 20px;
+    }
+    .gsi-material-button .gsi-material-button-content-wrapper {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      height: 100%;
+      justify-content: space-between;
+      position: relative;
+      width: 100%;
+    }
+    .gsi-material-button .gsi-material-button-contents {
+      flex-grow: 1;
+      font-family: 'Roboto', arial, sans-serif;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: top;
+    }
+    .gsi-material-button:hover {
+      box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+      background-color: #f8f9fa;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Accessible Skip Link -->
+  <a class="skip-link visually-hidden-focusable" href="#main">Skip to main content</a>
+
+  <!-- Top Bar -->
+  <div class="top-notice-bar d-none d-md-block">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <span class="badge-reg"><i class="bi bi-patch-check-fill"></i> Regulated by ICPAK</span>
+        <span><i class="bi bi-geo-alt me-1"></i> Vision Plaza, Nairobi &bull; Kitengela Office</span>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <a href="tel:+254723606653"><i class="bi bi-telephone me-1"></i> +254 723606653</a>
+        <span>&bull;</span>
+        <a href="mailto:mwangiemmah2023@gmail.com"><i class="bi bi-envelope me-1"></i> mwangiemmah2023@gmail.com</a>
+        <span>&bull;</span>
+        <a href="portal.html" class="nav-portal-link py-0 px-2 text-white active">
+          <i class="bi bi-speedometer2"></i> Portal
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header & Navbar -->
+  <header class="site-header">
+    <nav class="navbar navbar-expand-lg navbar-dark py-2" aria-label="Main Navigation">
+      <div class="container">
+        <a class="navbar-brand-wrapper" href="index.html">
+          <img src="https://www.kenyabizlist.com/logos/16046.jpg" alt="Mwangi Wangondu & Associates Logo" class="brand-logo-img">
+          <div class="brand-text-block">
+            <span class="brand-name">Mwangi Wangondu & Associates</span>
+            <span class="brand-subline">Certified Public Accountants (K)</span>
+          </div>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navCollapse" 
+                aria-controls="navCollapse" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navCollapse">
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="aboutthefirm.html">About Us</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="services.html">Our Services</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="contactpage.html">Contact Us</a>
+            </li>
+            <li class="nav-item ms-lg-3 my-2 my-lg-0">
+              <a class="btn-mwa-cta" href="BOOKACONSULTATION.html">
+                <i class="bi bi-calendar2-check me-1"></i> Book a Consultation
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    
+    <!-- SUBHERO BANNER -->
+    <section class="subhero-banner">
+      <div class="container">
+        <div class="hero-eyebrow">
+          <i class="bi bi-shield-lock"></i> Practice Management &amp; Engagement Desk
+        </div>
+        <h1 class="display-5 fw-bold">Consultation Portal &amp; Google Sheets Automation</h1>
+        <p class="subhero-lead">
+          Real-time receiver for client consultations with automated mirroring to Google Sheets, CRM webhook dispatch, and CSV export.
+        </p>
+      </div>
+    </section>
+
+    <!-- PORTAL DASHBOARD SECTION -->
+    <section class="section-py bg-light-alt">
+      <div class="container">
+        
+        <!-- Live Status Bar -->
+        <div id="syncAlertBar" class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between mb-4 py-3" role="alert">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+            <div>
+              <strong id="syncAlertTitle">Google Sheets Sync Status:</strong>
+              <span id="syncAlertText" class="ms-1">Checking webhook configuration...</span>
+            </div>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="/api/consultations/export.excel" class="btn btn-sm btn-success fw-bold">
+              <i class="bi bi-file-earmark-excel me-1"></i> Download for Excel (.csv)
+            </a>
+            <a href="/api/consultations/export.csv" class="btn btn-sm btn-outline-success bg-white text-success">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i> Google Sheets (CSV)
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="row g-4 mb-4">
+          <div class="col-md-3">
+            <div class="p-3 bg-white rounded-3 shadow-sm border border-subtle d-flex align-items-center justify-content-between">
+              <div>
+                <div class="text-muted small fw-semibold text-uppercase">Total Consultations</div>
+                <div class="display-6 fw-bold text-primary mt-1" id="statConsultationsCount">--</div>
+              </div>
+              <div class="p-3 bg-primary bg-opacity-10 rounded-circle text-primary fs-4">
+                <i class="bi bi-calendar2-check"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 bg-white rounded-3 shadow-sm border border-subtle d-flex align-items-center justify-content-between">
+              <div>
+                <div class="text-muted small fw-semibold text-uppercase">Google Sheets Synced</div>
+                <div class="display-6 fw-bold text-success mt-1" id="statSyncedCount">--</div>
+              </div>
+              <div class="p-3 bg-success bg-opacity-10 rounded-circle text-success fs-4">
+                <i class="bi bi-cloud-check"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 bg-white rounded-3 shadow-sm border border-subtle d-flex align-items-center justify-content-between">
+              <div>
+                <div class="text-muted small fw-semibold text-uppercase">General Inquiries</div>
+                <div class="display-6 fw-bold text-info mt-1" id="statContactsCount">--</div>
+              </div>
+              <div class="p-3 bg-info bg-opacity-10 rounded-circle text-info fs-4">
+                <i class="bi bi-chat-dots"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 bg-white rounded-3 shadow-sm border border-subtle d-flex align-items-center justify-content-between">
+              <div>
+                <div class="text-muted small fw-semibold text-uppercase">Automation Engine</div>
+                <div class="fw-bold text-dark mt-1" id="statEngineStatus">Checking...</div>
+                <div class="small text-muted" id="statEngineDetail">Webhook Mirror</div>
+              </div>
+              <div class="p-3 bg-warning bg-opacity-10 rounded-circle text-warning fs-4">
+                <i class="bi bi-gear-wide-connected"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills mb-4" id="portalTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active px-4 py-2 fw-semibold" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultationsTabPane" type="button" role="tab">
+              <i class="bi bi-calendar2-check me-2"></i> Consultations (<span id="consultationBadge">0</span>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link px-4 py-2 fw-semibold" id="excel-tab" data-bs-toggle="tab" data-bs-target="#excelTabPane" type="button" role="tab">
+              <i class="bi bi-file-earmark-excel text-success me-2"></i> Connect to Excel
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link px-4 py-2 fw-semibold" id="sheets-tab" data-bs-toggle="tab" data-bs-target="#sheetsTabPane" type="button" role="tab">
+              <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i> Google Sheets &amp; Webhook Setup
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link px-4 py-2 fw-semibold" id="contacts-tab" data-bs-toggle="tab" data-bs-target="#contactsTabPane" type="button" role="tab">
+              <i class="bi bi-envelope me-2"></i> General Inquiries (<span id="contactsBadge">0</span>)
+            </button>
+          </li>
+          <li class="nav-item ms-auto d-flex gap-2">
+            <button id="syncAllBtn" class="btn btn-outline-success btn-sm px-3 py-2">
+              <i class="bi bi-cloud-arrow-up me-1"></i> Sync All to Sheets
+            </button>
+            <button id="refreshBtn" class="btn btn-outline-primary btn-sm px-3 py-2">
+              <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="portalTabsContent">
+          
+          <!-- CONSULTATIONS TAB -->
+          <div class="tab-pane fade show active" id="consultationsTabPane" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+              <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-dark fw-bold">
+                  <i class="bi bi-table me-2 text-primary"></i> Scheduled Consultations
+                </h5>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                  <i class="bi bi-check2-circle me-1"></i> Persistent Local Storage Active
+                </span>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="ps-4">Reference</th>
+                        <th>Client / Organization</th>
+                        <th>Service Area</th>
+                        <th>Format &amp; Schedule</th>
+                        <th>Contact</th>
+                        <th>Google Sheets</th>
+                        <th class="pe-4 text-end">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="consultationsTableBody">
+                      <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                          <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                          Loading consultation submissions...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GOOGLE SHEETS & WEBHOOK SETUP TAB -->
+          <div class="tab-pane fade" id="sheetsTabPane" role="tabpanel">
+            <div class="row g-4">
+
+              <!-- 1-Click Direct Google Sheets Connection Card -->
+              <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-success">
+                  <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                      <h5 class="mb-0 text-dark fw-bold">
+                        <i class="bi bi-google text-danger me-2"></i> Direct Google Sheets Authorization (Zero Code / Zero Apps Script)
+                      </h5>
+                      <div class="text-muted small">Connect your Google Account to write consultations directly into your Google Sheet without any Webhook or Apps Script errors.</div>
+                    </div>
+                    <span id="googleAuthBadge" class="badge bg-secondary-subtle text-secondary border px-3 py-2">Not Connected</span>
+                  </div>
+                  <div class="card-body p-4">
+                    <!-- When Signed Out -->
+                    <div id="googleSignedOutState" class="text-center py-3">
+                      <p class="text-muted mb-3">
+                        Sign in with your Google account (<code>mwangiemmah2023@gmail.com</code>) to grant direct access to create or sync your consultations spreadsheet.
+                      </p>
+                      <button class="gsi-material-button mx-auto" id="googleSignInBtn" type="button">
+                        <div class="gsi-material-button-state"></div>
+                        <div class="gsi-material-button-content-wrapper">
+                          <div class="gsi-material-button-icon">
+                            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
+                              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                              <path fill="none" d="M0 0h48v48H0z"></path>
+                            </svg>
+                          </div>
+                          <span class="gsi-material-button-contents">Sign in with Google</span>
+                        </div>
+                      </button>
+                    </div>
+
+                    <!-- When Signed In -->
+                    <div id="googleSignedInState" class="d-none">
+                      <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 border mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                          <img id="googleUserAvatar" src="https://lh3.googleusercontent.com/a/default-user=s96-c" class="rounded-circle border" width="42" height="42" alt="Avatar">
+                          <div>
+                            <div class="fw-bold text-dark" id="googleUserName">Signed-In User</div>
+                            <div class="small text-muted" id="googleUserEmail">user@gmail.com</div>
+                          </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" id="googleSignOutBtn" type="button">
+                          <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+                        </button>
+                      </div>
+
+                      <div class="row g-3 align-items-end">
+                        <div class="col-md-7">
+                          <label for="directSpreadsheetIdInput" class="form-label fw-bold small">
+                            Target Google Sheet (Spreadsheet ID or full URL):
+                          </label>
+                          <input type="text" class="form-control" id="directSpreadsheetIdInput" 
+                                 placeholder="Paste Google Sheet URL (https://docs.google.com/spreadsheets/d/.../edit)">
+                        </div>
+                        <div class="col-md-5 d-flex gap-2">
+                          <button class="btn btn-outline-primary w-100" type="button" id="autoCreateSpreadsheetBtn">
+                            <i class="bi bi-file-earmark-plus me-1"></i> Auto-Create New Sheet
+                          </button>
+                        </div>
+                        <div class="col-12 mt-3">
+                          <button class="btn btn-success fw-bold px-4 py-2" type="button" id="directSyncBtn">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Sync All Bookings to Google Sheet
+                          </button>
+                          <span class="ms-2 small text-muted">Directly appends all consultations via Google Sheets API v4.</span>
+                        </div>
+                      </div>
+
+                      <div id="directSyncFeedback" class="mt-3"></div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Configuration Card -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                  <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 text-dark fw-bold">
+                      <i class="bi bi-sliders me-2 text-primary"></i> Webhook &amp; Google Sheets Automation
+                    </h5>
+                  </div>
+                  <div class="card-body p-4">
+                    <form id="webhookConfigForm">
+                      
+                      <div class="mb-3">
+                        <label for="webhookUrlInput" class="form-label fw-bold">
+                          Google Apps Script Web App URL / Webhook
+                        </label>
+                        <input type="url" class="form-control" id="webhookUrlInput" 
+                               placeholder="https://script.google.com/macros/s/.../exec or CRM webhook" required>
+                        <div class="form-text small">
+                          Every new consultation booking is automatically mirrored via HTTP POST to this endpoint.
+                        </div>
+                      </div>
+
+                      <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="autoSyncCheckbox" checked>
+                        <label class="form-check-label fw-semibold" for="autoSyncCheckbox">
+                          Enable Automatic Real-Time Mirroring on Form Submission
+                        </label>
+                      </div>
+
+                      <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="saveWebhookBtn">
+                          <i class="bi bi-save me-1"></i> Save Configuration
+                        </button>
+                        <button type="button" class="btn btn-outline-success" id="testWebhookBtn">
+                          <i class="bi bi-play-circle me-1"></i> Test Webhook Dispatch
+                        </button>
+                      </div>
+
+                      <div id="webhookFeedback" class="mt-3"></div>
+
+                    </form>
+
+                    <hr class="my-4">
+
+                    <!-- Connected Google Sheet Quick Access -->
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <h6 class="fw-bold text-dark mb-0">
+                          <i class="bi bi-file-earmark-spreadsheet-fill text-success me-1"></i> Your Connected Google Sheet
+                        </h6>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Published to Web</span>
+                      </div>
+                      <p class="small text-muted mb-2">
+                        Your published Google Sheet is linked to this practice desk:
+                      </p>
+                      <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control font-monospace" readonly value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pub?output=csv" id="userSheetLinkInput">
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('userSheetLinkInput').value); alert('Copied published sheet link!');">
+                          <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                      </div>
+                      <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pubhtml" target="_blank" rel="noopener" class="btn btn-sm btn-success">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Open My Google Sheet in Browser
+                      </a>
+                    </div>
+
+                    <!-- Direct CSV Export Option -->
+                    <div>
+                      <h6 class="fw-bold text-dark mb-2">Direct Spreadsheet Import</h6>
+                      <p class="small text-muted mb-3">
+                        Download all historical bookings as a clean CSV file and open it directly in Excel or Google Sheets.
+                      </p>
+                      <a href="/api/consultations/export.csv" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-download me-1"></i> Download All Consultations (CSV)
+                      </a>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Setup Instructions Card -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-dark fw-bold">
+                      <i class="bi bi-journal-code me-2 text-success"></i> 60-Second Google Sheets Setup Guide
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" id="copyScriptBtn">
+                      <i class="bi bi-clipboard me-1"></i> Copy Code
+                    </button>
+                  </div>
+                  <div class="card-body p-4">
+                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3 rounded-2">
+                      <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                      <strong>Crucial Setting to Prevent 401 Errors:</strong> In Google Apps Script, ensure <strong>Who has access</strong> is set to <strong>"Anyone"</strong> (NOT "Only myself"). If left as "Only myself", Google blocks automated submissions with an authorization error.
+                    </div>
+
+                    <ol class="small text-muted ps-3 mb-3">
+                      <li class="mb-2">Open a new Google Sheet at <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a></li>
+                      <li class="mb-2">Click <strong>Extensions &gt; Apps Script</strong> in the top menu.</li>
+                      <li class="mb-2">Paste the script below into <code>Code.gs</code>, replacing existing content.</li>
+                      <li class="mb-2">Click <strong>Deploy &gt; New deployment</strong>.</li>
+                      <li class="mb-2">Click the gear icon next to "Select type" and choose <strong>Web app</strong>.</li>
+                      <li class="mb-2">Set <strong>Execute as:</strong> <code>Me</code> and <strong>Who has access:</strong> <code>Anyone</code>.</li>
+                      <li class="mb-2">Click <strong>Deploy</strong>, copy the generated Web App URL, and paste it into the configuration on the left.</li>
+                    </ol>
+
+                    <div class="position-relative">
+                      <pre class="bg-dark text-white p-3 rounded-2 small mb-0" style="max-height: 240px; overflow-y: auto;" id="scriptCodeBlock"><code>function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "Reference Code", "Timestamp", "Full Name", "Email", "Phone",
+        "Organization", "Sector", "Service Area", "Format",
+        "Preferred Date", "Time Window", "Message Scope", "Source"
+      ]);
+      var headerRange = sheet.getRange(1, 1, 1, 13);
+      headerRange.setFontWeight("bold");
+      headerRange.setBackground("#001f3f");
+      headerRange.setFontColor("#ffffff");
+    }
+
+    sheet.appendRow([
+      data.referenceCode || "",
+      data.timestamp || new Date().toISOString(),
+      data.fullName || data.name || "",
+      data.email || "",
+      data.phone || "",
+      data.organization || "Not specified",
+      data.sector || "General",
+      data.serviceArea || data.service || "",
+      data.consultationMode || "In-Person (Vision Plaza, Nairobi)",
+      data.preferredDate || data.date || "",
+      data.preferredTimeWindow || data.time || "",
+      data.message || "",
+      data.source || "MWA Website"
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      referenceCode: data.referenceCode
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- CONNECT TO EXCEL TAB -->
+          <div class="tab-pane fade" id="excelTabPane" role="tabpanel">
+            <div class="row g-4">
+              
+              <!-- Option 1: Instant Static Excel Download -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-dark fw-bold">
+                      <i class="bi bi-file-earmark-excel me-2 text-success"></i> Method 1: Instant File Download
+                    </h5>
+                    <span class="badge bg-secondary-subtle text-secondary">Static Snapshot</span>
+                  </div>
+                  <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                      <div class="alert alert-info py-2 px-3 small border-0 mb-3 rounded-2">
+                        <i class="bi bi-info-circle me-1"></i> <strong>Note:</strong> A downloaded file is a snapshot of all bookings up to right now. It does not update itself automatically when new clients book. For continuous auto-sync, see <strong>Method 2</strong>!
+                      </div>
+                      <p class="text-muted small mb-3">
+                        Every single consultation booked on the website is permanently stored on the practice server. You can download the ledger anytime with 1 click and double-click to open directly in Microsoft Excel.
+                      </p>
+                      <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="fw-semibold small text-dark mb-1">Pre-Formatted Excel Columns:</div>
+                        <div class="small text-muted">
+                          Reference Code, Received Date, Full Name, Email, Phone, Organization, Industry Sector, Service Area, Consultation Format, Preferred Date, Time Window, Scope Description, Status.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="pt-2">
+                      <a href="/api/consultations/export.excel" class="btn btn-success px-4 py-2 fw-semibold w-100">
+                        <i class="bi bi-download me-2"></i> Download Complete Ledger (.csv)
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Option 2: Continuous Live Auto-Sync to Excel -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                  <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-dark fw-bold">
+                      <i class="bi bi-arrow-repeat me-2 text-primary"></i> Method 2: Live Auto-Sync to Excel
+                    </h5>
+                    <span class="badge bg-success-subtle text-success">Continuous Real-Time</span>
+                  </div>
+                  <div class="card-body p-4">
+                    <p class="text-muted small mb-2">
+                      To have <strong>new bookings automatically flow into Excel without downloading files every time</strong>, use one of these two proven paths:
+                    </p>
+
+                    <div class="border rounded-3 p-3 mb-3 bg-light">
+                      <div class="fw-bold small text-dark mb-1">
+                        <i class="bi bi-star-fill text-warning me-1"></i> Path A: Google Sheets &rarr; Excel Auto-Sync (Easiest)
+                      </div>
+                      <ol class="small text-muted ps-3 mb-0">
+                        <li class="mb-1">In your Google Sheet, click <strong>File &gt; Share &gt; Publish to web</strong>.</li>
+                        <li class="mb-1">Select <strong>Entire Document</strong> and change "Web page" to <strong>Comma-separated values (.csv)</strong>, then click <strong>Publish</strong>.</li>
+                        <li class="mb-1">Copy the published link. In Excel, click <strong>Data &gt; From Web</strong> and paste that link.</li>
+                        <li class="mb-1">In Excel's Data Connection properties, check <strong>"Refresh every 5 minutes"</strong>.</li>
+                        <li><strong>Result:</strong> Whenever a client books on the site, the sheet updates instantly, and your Excel spreadsheet updates itself automatically!</li>
+                      </ol>
+                    </div>
+
+                    <div class="border rounded-3 p-3 bg-light">
+                      <div class="fw-bold small text-dark mb-1">
+                        <i class="bi bi-globe me-1"></i> Path B: Direct Excel Web Query (When Production Domain is Live)
+                      </div>
+                      <p class="small text-muted mb-2">
+                        Desktop Excel showed <em>"Unable to connect to the remote server"</em> because the development preview domain is protected. Once your website is on your live domain (e.g., <code>https://mwangiandwangonduassociates.com</code>), you can paste:
+                      </p>
+                      <div class="input-group mb-2">
+                        <input type="text" class="form-control form-control-sm font-monospace" id="excelLiveFeedUrl" readonly value="">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="copyExcelFeedBtn">
+                          <i class="bi bi-clipboard me-1"></i> Copy
+                        </button>
+                      </div>
+                      <div class="small text-muted">
+                        In Excel: <strong>Data &gt; From Web &gt; paste URL &gt; Refresh All</strong>.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Security & Account Privacy Guidance -->
+              <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-3 bg-light">
+                  <div class="card-body p-4">
+                    <div class="d-flex align-items-start gap-3">
+                      <div class="p-3 bg-white rounded-circle shadow-sm text-primary fs-3 flex-shrink-0">
+                        <i class="bi bi-shield-check"></i>
+                      </div>
+                      <div>
+                        <h5 class="text-dark fw-bold mb-1">Important: Account Privacy &amp; Security</h5>
+                        <p class="small text-muted mb-2">
+                          <strong>You never need to give anyone access to your personal email or apps.</strong> For your protection, never share account credentials or passwords. The booking form and backend already record, validate, and store every client consultation automatically.
+                        </p>
+                        <p class="small text-muted mb-0">
+                          If you want live Google Sheets synchronization in addition to Excel, you only need to make one simple change: in Google Apps Script, click <em>Deploy &gt; Manage Deployments</em> and ensure <strong>Who has access</strong> is set to <strong>"Anyone"</strong>. Once saved, all bookings sync instantly!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- CONTACT INQUIRIES TAB -->
+          <div class="tab-pane fade" id="contactsTabPane" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+              <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 text-dark fw-bold">
+                  <i class="bi bi-envelope-open me-2 text-primary"></i> General Messages Received
+                </h5>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="ps-4">Reference</th>
+                        <th>Name</th>
+                        <th>Email / Phone</th>
+                        <th>Subject</th>
+                        <th>Message</th>
+                        <th class="pe-4">Received</th>
+                      </tr>
+                    </thead>
+                    <tbody id="contactsTableBody">
+                      <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                          <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                          Loading inquiries...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal for Full Details -->
+  <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="detailModalTitle">Consultation Details</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4" id="detailModalBody">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SITE FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom-bar d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+        <div>
+          &copy; 2026 Mwangi Wangondu &amp; Associates. All rights reserved.
+        </div>
+        <div class="d-flex gap-3">
+          <span>Registered Certified Public Accountants</span>
+          <span>&bull;</span>
+          <span>Kenya &bull; East Africa</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Firebase SDK for Google Workspace OAuth -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    let consultationsData = [];
+    let contactsData = [];
+    let currentConfig = {};
+
+    async function loadPortalData() {
+      try {
+        const [consultRes, contactRes, statusRes, configRes] = await Promise.all([
+          fetch('/api/consultations'),
+          fetch('/api/contacts'),
+          fetch('/api/status'),
+          fetch('/api/config')
+        ]);
+
+        const consultJson = await consultRes.json();
+        const contactJson = await contactRes.json();
+        const statusJson = await statusRes.json();
+        const configJson = await configRes.json();
+
+        consultationsData = consultJson.consultations || [];
+        contactsData = contactJson.contacts || [];
+        currentConfig = configJson || {};
+
+        // Update counts
+        const syncedCount = consultationsData.filter(c => c.syncedToGoogleSheets).length;
+        document.getElementById('statConsultationsCount').textContent = consultationsData.length;
+        document.getElementById('statSyncedCount').textContent = syncedCount;
+        document.getElementById('statContactsCount').textContent = contactsData.length;
+        document.getElementById('consultationBadge').textContent = consultationsData.length;
+        document.getElementById('contactsBadge').textContent = contactsData.length;
+
+        // Update automation status indicator
+        const isConfigured = !!(currentConfig.configured || (currentConfig.googleSheetsWebhookUrl && currentConfig.googleSheetsWebhookUrl.trim()));
+        const isAutoSync = currentConfig.autoSyncEnabled !== false;
+
+        const statEngineStatus = document.getElementById('statEngineStatus');
+        const statEngineDetail = document.getElementById('statEngineDetail');
+        const syncAlertText = document.getElementById('syncAlertText');
+
+        if (isConfigured && isAutoSync) {
+          statEngineStatus.textContent = 'Active (Live)';
+          statEngineStatus.className = 'fw-bold text-success mt-1';
+          statEngineDetail.textContent = 'Auto-Mirroring to Sheets';
+          syncAlertText.innerHTML = '<span class="text-success fw-bold">Live Auto-Sync Active</span> &bull; Webhook connected via GOOGLE_SHEETS_WEBHOOK environment variable. All verified bookings are mirrored in real time.';
+        } else if (isConfigured && !isAutoSync) {
+          statEngineStatus.textContent = 'Paused';
+          statEngineStatus.className = 'fw-bold text-warning mt-1';
+          statEngineDetail.textContent = 'Auto-sync turned off';
+          syncAlertText.innerHTML = '<span class="text-warning fw-bold">Auto-Sync Paused</span> &bull; Webhook configured but auto-sync is disabled in settings.';
+        } else {
+          statEngineStatus.textContent = 'Ready to Connect';
+          statEngineStatus.className = 'fw-bold text-primary mt-1';
+          statEngineDetail.textContent = 'CSV Export Available';
+          syncAlertText.innerHTML = 'Set the <code>GOOGLE_SHEETS_WEBHOOK</code> environment variable to your Google Apps Script URL to enable 100% automated row entry.';
+        }
+
+        // Fill form fields
+        document.getElementById('webhookUrlInput').value = currentConfig.maskedWebhookUrl || currentConfig.googleSheetsWebhookUrl || '';
+        document.getElementById('autoSyncCheckbox').checked = isAutoSync;
+
+        renderConsultations(consultationsData);
+        renderContacts(contactsData);
+      } catch (err) {
+        console.error('Error fetching portal data:', err);
+        document.getElementById('consultationsTableBody').innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-4 text-danger">
+              <i class="bi bi-exclamation-triangle me-1"></i> Failed to connect to local API: ${err.message}
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderConsultations(items) {
+      const tbody = document.getElementById('consultationsTableBody');
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              No consultation requests recorded yet.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = items.map((item, idx) => {
+        const dateStr = item.receivedAt ? new Date(item.receivedAt).toLocaleString() : 'N/A';
+        const isSynced = item.syncedToGoogleSheets;
+        const sheetsBadge = isSynced 
+          ? `<span class="badge bg-success text-white"><i class="bi bi-check-circle-fill me-1"></i> Synced</span>`
+          : `<button class="btn btn-sm btn-outline-success py-0 px-2" onclick="syncSingleConsultation('${escapeHtml(item.referenceCode)}', this)">
+              <i class="bi bi-cloud-arrow-up"></i> Sync Now
+             </button>`;
+
+        return `
+          <tr>
+            <td class="ps-4">
+              <span class="badge bg-primary text-white">${escapeHtml(item.referenceCode)}</span>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">${escapeHtml(item.fullName)}</div>
+              <div class="small text-muted">${escapeHtml(item.organization || 'Individual')} (${escapeHtml(item.sector || 'General')})</div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">${escapeHtml(item.serviceArea)}</span>
+            </td>
+            <td>
+              <div class="small fw-semibold text-dark">${escapeHtml(item.consultationMode)}</div>
+              <div class="small text-muted">${escapeHtml(item.preferredDate)} &bull; ${escapeHtml(item.preferredTimeWindow)}</div>
+            </td>
+            <td>
+              <div class="small"><a href="mailto:${escapeHtml(item.email)}">${escapeHtml(item.email)}</a></div>
+              <div class="small"><a href="tel:${escapeHtml(item.phone)}">${escapeHtml(item.phone)}</a></div>
+            </td>
+            <td>
+              ${sheetsBadge}
+            </td>
+            <td class="pe-4 text-end">
+              <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${idx})">
+                <i class="bi bi-eye"></i> View Scope
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderContacts(items) {
+      const tbody = document.getElementById('contactsTableBody');
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              No inquiries received yet.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = items.map(item => {
+        const dateStr = item.receivedAt ? new Date(item.receivedAt).toLocaleString() : 'N/A';
+        return `
+          <tr>
+            <td class="ps-4">
+              <span class="badge bg-secondary text-white">${escapeHtml(item.referenceCode)}</span>
+            </td>
+            <td class="fw-bold text-dark">${escapeHtml(item.fullName)}</td>
+            <td class="small">
+              <div><a href="mailto:${escapeHtml(item.email)}">${escapeHtml(item.email)}</a></div>
+              <div>${escapeHtml(item.phone)}</div>
+            </td>
+            <td class="fw-semibold text-dark">${escapeHtml(item.subject)}</td>
+            <td class="small text-muted" style="max-width: 320px;">
+              ${escapeHtml(item.message)}
+            </td>
+            <td class="pe-4 small text-muted">${dateStr}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function syncSingleConsultation(refCode, btnElement) {
+      if (!currentConfig.configured && !currentConfig.googleSheetsWebhookUrl) {
+        alert('Please configure your Google Sheets Webhook URL first or set GOOGLE_SHEETS_WEBHOOK.');
+        return;
+      }
+      btnElement.disabled = true;
+      btnElement.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+      try {
+        const res = await fetch('/api/sync-consultation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referenceCode: refCode })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadPortalData();
+        } else {
+          alert('Sync failed: ' + (data.result?.error || 'Check webhook URL.'));
+          btnElement.disabled = false;
+          btnElement.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Retry';
+        }
+      } catch (err) {
+        alert('Network error during sync: ' + err.message);
+        btnElement.disabled = false;
+      }
+    }
+
+    async function syncAllConsultations() {
+      const btn = document.getElementById('syncAllBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Syncing...';
+
+      try {
+        const res = await fetch('/api/sync-consultation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Successfully synced ${data.syncedCount} of ${data.totalAttempted} consultations to Google Sheets!`);
+          loadPortalData();
+        } else {
+          alert('Sync error: ' + (data.error || 'Check webhook configuration.'));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Sync All to Sheets';
+      }
+    }
+
+    // Save Webhook Configuration
+    document.getElementById('webhookConfigForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const webhookUrl = document.getElementById('webhookUrlInput').value.trim();
+      const autoSync = document.getElementById('autoSyncCheckbox').checked;
+      const feedback = document.getElementById('webhookFeedback');
+      const saveBtn = document.getElementById('saveWebhookBtn');
+
+      saveBtn.disabled = true;
+      feedback.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Saving...';
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            googleSheetsWebhookUrl: webhookUrl,
+            autoSyncEnabled: autoSync
+          })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          feedback.innerHTML = '<div class="alert alert-success py-2 mb-0 small"><i class="bi bi-check-circle me-1"></i> Google Sheets webhook configuration saved successfully.</div>';
+          loadPortalData();
+        } else {
+          feedback.innerHTML = '<div class="alert alert-danger py-2 mb-0 small">Failed to save settings.</div>';
+        }
+      } catch (err) {
+        feedback.innerHTML = `<div class="alert alert-danger py-2 mb-0 small">Error: ${err.message}</div>`;
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    // Test Webhook Dispatch
+    document.getElementById('testWebhookBtn')?.addEventListener('click', async () => {
+      const webhookUrl = document.getElementById('webhookUrlInput').value.trim();
+      const feedback = document.getElementById('webhookFeedback');
+      if (!webhookUrl) {
+        feedback.innerHTML = '<div class="alert alert-warning py-2 mb-0 small">Please enter a Webhook URL first.</div>';
+        return;
+      }
+
+      feedback.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Sending test row to Google Sheets...';
+
+      // First save it
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSheetsWebhookUrl: webhookUrl, autoSyncEnabled: true })
+      });
+
+      // Then test sync with first consultation if available or test payload
+      if (consultationsData.length > 0) {
+        const testRef = consultationsData[0].referenceCode;
+        try {
+          const res = await fetch('/api/sync-consultation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referenceCode: testRef })
+          });
+          const testResult = await res.json();
+          if (testResult.success) {
+            feedback.innerHTML = `<div class="alert alert-success py-2 mb-0 small"><i class="bi bi-check-circle me-1"></i> <strong>Success!</strong> Test booking (${testRef}) was mirrored to your Google Sheet!</div>`;
+            loadPortalData();
+          } else {
+            feedback.innerHTML = `<div class="alert alert-danger py-2 mb-0 small"><i class="bi bi-x-circle me-1"></i> Webhook returned an error: ${testResult.result?.error || testResult.result?.statusText || 'Unable to connect'}. Check permissions in Apps Script (Must be "Anyone").</div>`;
+          }
+        } catch (err) {
+          feedback.innerHTML = `<div class="alert alert-danger py-2 mb-0 small">Connection failed: ${err.message}</div>`;
+        }
+      } else {
+        feedback.innerHTML = '<div class="alert alert-info py-2 mb-0 small">Settings saved! Submit a consultation form on the website to trigger the first live row in your Google Sheet.</div>';
+      }
+    });
+
+    // Copy script code
+    document.getElementById('copyScriptBtn')?.addEventListener('click', () => {
+      const code = document.querySelector('#scriptCodeBlock code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.getElementById('copyScriptBtn');
+        btn.innerHTML = '<i class="bi bi-check2 text-success me-1"></i> Copied!';
+        setTimeout(() => {
+          btn.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copy Code';
+        }, 2000);
+      });
+    });
+
+    function viewDetails(index) {
+      const item = consultationsData[index];
+      if (!item) return;
+
+      const modalBody = document.getElementById('detailModalBody');
+      modalBody.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0 text-primary">${escapeHtml(item.referenceCode)}</h4>
+          <span class="badge bg-success">${escapeHtml(item.status || 'Received')}</span>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="text-muted small">Full Name:</label>
+            <div class="fw-bold">${escapeHtml(item.fullName)}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Company / Organization:</label>
+            <div class="fw-bold">${escapeHtml(item.organization)}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Email Address:</label>
+            <div><a href="mailto:${escapeHtml(item.email)}">${escapeHtml(item.email)}</a></div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Telephone / WhatsApp:</label>
+            <div><a href="tel:${escapeHtml(item.phone)}">${escapeHtml(item.phone)}</a></div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Primary Service Area:</label>
+            <div class="fw-bold text-dark">${escapeHtml(item.serviceArea)}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Industry Sector:</label>
+            <div>${escapeHtml(item.sector)}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Consultation Format:</label>
+            <div>${escapeHtml(item.consultationMode)}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="text-muted small">Preferred Schedule:</label>
+            <div>${escapeHtml(item.preferredDate)} (${escapeHtml(item.preferredTimeWindow)})</div>
+          </div>
+          <div class="col-md-12">
+            <label class="text-muted small">Google Sheets Sync Status:</label>
+            <div class="fw-semibold ${item.syncedToGoogleSheets ? 'text-success' : 'text-muted'}">
+              ${item.syncedToGoogleSheets ? `<i class="bi bi-cloud-check-fill text-success"></i> Synced to Google Sheets at ${item.syncedAt}` : '<i class="bi bi-clock"></i> Not synced to external webhook yet'}
+            </div>
+          </div>
+          <div class="col-12 mt-3">
+            <label class="text-muted small">Client Scope Description / Message:</label>
+            <div class="p-3 bg-light rounded border mt-1" style="white-space: pre-wrap;">
+              ${escapeHtml(item.message || 'No additional scope message provided.')}
+            </div>
+          </div>
+          <div class="col-12 mt-2 text-muted small">
+            <div><strong>Received Timestamp:</strong> ${new Date(item.receivedAt).toISOString()}</div>
+            <div><strong>Client IP:</strong> ${escapeHtml(item.clientIp)}</div>
+          </div>
+        </div>
+      `;
+
+      const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+      modal.show();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function setupExcelFeed() {
+      const liveFeedInput = document.getElementById('excelLiveFeedUrl');
+      if (liveFeedInput) {
+        liveFeedInput.value = window.location.origin + '/api/consultations/export.csv';
+      }
+
+      document.getElementById('copyExcelFeedBtn')?.addEventListener('click', () => {
+        if (!liveFeedInput) return;
+        navigator.clipboard.writeText(liveFeedInput.value).then(() => {
+          const btn = document.getElementById('copyExcelFeedBtn');
+          btn.innerHTML = '<i class="bi bi-check2 text-success me-1"></i> Copied!';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copy URL';
+          }, 2000);
+        });
+      });
+    }
+
+    let cachedAccessToken = null;
+    let currentGoogleUser = null;
+
+    function extractSpreadsheetId(val) {
+      if (!val) return '';
+      val = val.trim();
+      const match = val.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) return match[1];
+      return val;
+    }
+
+    async function initGoogleAuth() {
+      const signInBtn = document.getElementById('googleSignInBtn');
+      const signOutBtn = document.getElementById('googleSignOutBtn');
+      const signedOutState = document.getElementById('googleSignedOutState');
+      const signedInState = document.getElementById('googleSignedInState');
+      const authBadge = document.getElementById('googleAuthBadge');
+      const userNameEl = document.getElementById('googleUserName');
+      const userEmailEl = document.getElementById('googleUserEmail');
+      const userAvatarEl = document.getElementById('googleUserAvatar');
+      const sheetInput = document.getElementById('directSpreadsheetIdInput');
+      const createSheetBtn = document.getElementById('autoCreateSpreadsheetBtn');
+      const syncBtn = document.getElementById('directSyncBtn');
+      const feedbackEl = document.getElementById('directSyncFeedback');
+
+      try {
+        const configRes = await fetch('/api/firebase-config');
+        const configData = await configRes.json();
+        if (!configData.success || !configData.config) {
+          console.warn('Firebase config not available.');
+          return;
+        }
+
+        if (!firebase.apps.length) {
+          firebase.initializeApp(configData.config);
+        }
+
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
+        // Check saved session on server
+        try {
+          const sessRes = await fetch('/api/google-sheets/session');
+          const sessData = await sessRes.json();
+          if (sessData.spreadsheetId && sheetInput && !sheetInput.value) {
+            sheetInput.value = sessData.spreadsheetId;
+          }
+        } catch (_) {}
+
+        auth.onAuthStateChanged(async (user) => {
+          currentGoogleUser = user;
+          if (user) {
+            signedOutState?.classList.add('d-none');
+            signedInState?.classList.remove('d-none');
+            if (authBadge) {
+              authBadge.textContent = 'Connected (Google)';
+              authBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2';
+            }
+            if (userNameEl) userNameEl.textContent = user.displayName || 'Authorized User';
+            if (userEmailEl) userEmailEl.textContent = user.email || '';
+            if (userAvatarEl && user.photoURL) userAvatarEl.src = user.photoURL;
+          } else {
+            cachedAccessToken = null;
+            signedOutState?.classList.remove('d-none');
+            signedInState?.classList.add('d-none');
+            if (authBadge) {
+              authBadge.textContent = 'Not Connected';
+              authBadge.className = 'badge bg-secondary-subtle text-secondary border px-3 py-2';
+            }
+          }
+        });
+
+        signInBtn?.addEventListener('click', async () => {
+          try {
+            signInBtn.disabled = true;
+            const result = await auth.signInWithPopup(provider);
+            const credential = result.credential;
+            cachedAccessToken = credential ? credential.accessToken : null;
+
+            if (cachedAccessToken) {
+              await fetch('/api/google-sheets/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  accessToken: cachedAccessToken,
+                  userEmail: result.user.email,
+                  spreadsheetId: sheetInput ? sheetInput.value.trim() : ''
+                })
+              });
+              if (feedbackEl) {
+                feedbackEl.innerHTML = '<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i> Signed in to Google successfully! You can now create or sync your Google Sheet.</div>';
+              }
+            }
+          } catch (err) {
+            console.error('Sign-in error:', err);
+            if (feedbackEl) {
+              feedbackEl.innerHTML = `<div class="alert alert-warning py-2 small"><i class="bi bi-info-circle me-1"></i> Sign-in note: ${err.message}</div>`;
+            }
+          } finally {
+            signInBtn.disabled = false;
+          }
+        });
+
+        signOutBtn?.addEventListener('click', async () => {
+          await auth.signOut();
+          cachedAccessToken = null;
+          await fetch('/api/google-sheets/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken: '', userEmail: '' })
+          });
+        });
+
+        createSheetBtn?.addEventListener('click', async () => {
+          if (!cachedAccessToken) {
+            try {
+              const result = await auth.signInWithPopup(provider);
+              cachedAccessToken = result.credential ? result.credential.accessToken : null;
+            } catch (err) {
+              alert('Please sign in to create your Google Sheet: ' + err.message);
+              return;
+            }
+          }
+
+          createSheetBtn.disabled = true;
+          createSheetBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating...';
+          feedbackEl.innerHTML = '<div class="alert alert-info py-2 small"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Creating "Mwangi Wangondu & Associates - Consultations Register" in your Google Drive...</div>';
+
+          try {
+            // 1. Create Spreadsheet
+            const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${cachedAccessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                properties: {
+                  title: 'Mwangi Wangondu & Associates - Consultations Register'
+                },
+                sheets: [
+                  {
+                    properties: {
+                      title: 'Consultations',
+                      gridProperties: {
+                        frozenRowCount: 1
+                      }
+                    }
+                  }
+                ]
+              })
+            });
+
+            const sheetData = await createRes.json();
+            if (!createRes.ok || !sheetData.spreadsheetId) {
+              throw new Error(sheetData.error?.message || 'Failed to create spreadsheet');
+            }
+
+            const newSheetId = sheetData.spreadsheetId;
+            if (sheetInput) sheetInput.value = newSheetId;
+
+            // 2. Set Header Row and existing Consultations
+            const headers = [
+              'Reference Code',
+              'Date Received',
+              'Full Name',
+              'Email',
+              'Phone / WhatsApp',
+              'Company / Organization',
+              'Industry Sector',
+              'Service Area',
+              'Consultation Format',
+              'Preferred Date',
+              'Time Window',
+              'Scope Description',
+              'Status'
+            ];
+
+            const rows = [headers];
+            consultationsData.forEach(c => {
+              rows.push([
+                c.referenceCode || '',
+                c.receivedAt || new Date().toISOString(),
+                c.fullName || c.name || '',
+                c.email || '',
+                c.phone || '',
+                c.organization || 'Not specified',
+                c.sector || 'General',
+                c.serviceArea || c.service || '',
+                c.consultationMode || '',
+                c.preferredDate || c.date || '',
+                c.preferredTimeWindow || c.time || '',
+                c.message || '',
+                c.status || 'Received'
+              ]);
+            });
+
+            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${newSheetId}/values/Consultations!A1:append?valueInputOption=USER_ENTERED`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${cachedAccessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ values: rows })
+            });
+
+            // 3. Save to server session
+            await fetch('/api/google-sheets/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                accessToken: cachedAccessToken,
+                spreadsheetId: newSheetId,
+                userEmail: currentGoogleUser?.email
+              })
+            });
+
+            // 4. Mark all current consultations as synced
+            if (consultationsData.length > 0) {
+              const refs = consultationsData.map(c => c.referenceCode);
+              await fetch('/api/consultations/mark-synced', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ referenceCodes: refs })
+              });
+            }
+
+            const sheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
+            feedbackEl.innerHTML = `
+              <div class="alert alert-success py-3 shadow-sm border-0">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                  <strong class="fs-6">Google Sheet Created &amp; Synced Successfully!</strong>
+                </div>
+                <p class="small mb-2">Your consultation register has been created in your Google Drive with ${consultationsData.length} booking records populated.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                  <a href="${sheetUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-success fw-bold">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Open in Google Sheets
+                  </a>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('${sheetUrl}'); alert('Copied sheet URL!');">
+                    <i class="bi bi-clipboard me-1"></i> Copy Sheet Link
+                  </button>
+                </div>
+              </div>
+            `;
+
+            loadPortalData();
+
+          } catch (err) {
+            console.error('Error creating spreadsheet:', err);
+            feedbackEl.innerHTML = `<div class="alert alert-danger py-2 small"><i class="bi bi-x-circle me-1"></i> ${err.message}</div>`;
+          } finally {
+            createSheetBtn.disabled = false;
+            createSheetBtn.innerHTML = '<i class="bi bi-file-earmark-plus me-1"></i> Auto-Create New Sheet';
+          }
+        });
+
+        syncBtn?.addEventListener('click', async () => {
+          const targetId = extractSpreadsheetId(sheetInput?.value);
+          if (!targetId) {
+            alert('Please enter or create a Google Sheet first.');
+            sheetInput?.focus();
+            return;
+          }
+
+          if (!cachedAccessToken) {
+            try {
+              const result = await auth.signInWithPopup(provider);
+              cachedAccessToken = result.credential ? result.credential.accessToken : null;
+            } catch (err) {
+              alert('Please sign in to sync with Google Sheets: ' + err.message);
+              return;
+            }
+          }
+
+          syncBtn.disabled = true;
+          syncBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Syncing...';
+          feedbackEl.innerHTML = '<div class="spinner-border spinner-border-sm text-success me-1"></div> Appending consultations to Google Sheet...';
+
+          try {
+            const unSynced = consultationsData.filter(c => !c.syncedToGoogleSheets);
+            const toSync = unSynced.length > 0 ? unSynced : consultationsData;
+
+            const rows = toSync.map(c => [
+              c.referenceCode || '',
+              c.receivedAt || new Date().toISOString(),
+              c.fullName || c.name || '',
+              c.email || '',
+              c.phone || '',
+              c.organization || 'Not specified',
+              c.sector || 'General',
+              c.serviceArea || c.service || '',
+              c.consultationMode || '',
+              c.preferredDate || c.date || '',
+              c.preferredTimeWindow || c.time || '',
+              c.message || '',
+              c.status || 'Received'
+            ]);
+
+            const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${targetId}/values/Consultations!A1:append?valueInputOption=USER_ENTERED`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${cachedAccessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ values: rows })
+            });
+
+            const appendData = await appendRes.json();
+            if (!appendRes.ok) {
+              throw new Error(appendData.error?.message || 'Google Sheets API error');
+            }
+
+            // Mark synced on server
+            const refs = toSync.map(c => c.referenceCode);
+            await fetch('/api/consultations/mark-synced', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referenceCodes: refs })
+            });
+
+            // Update server session with active token and spreadsheetId
+            await fetch('/api/google-sheets/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                accessToken: cachedAccessToken,
+                spreadsheetId: targetId,
+                userEmail: currentGoogleUser?.email
+              })
+            });
+
+            feedbackEl.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle me-1"></i> Successfully synced ${toSync.length} consultation(s) to your Google Sheet!</div>`;
+            loadPortalData();
+
+          } catch (err) {
+            console.error('Direct sync failed:', err);
+            feedbackEl.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-x-circle me-1"></i> Direct sync error: ${err.message}</div>`;
+          } finally {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Sync All Bookings to Google Sheet';
+          }
+        });
+
+      } catch (initErr) {
+        console.error('Google Auth init error:', initErr);
+      }
+    }
+
+    document.getElementById('refreshBtn')?.addEventListener('click', loadPortalData);
+    document.getElementById('syncAllBtn')?.addEventListener('click', syncAllConsultations);
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sync any client offline bookings into practice register
+      try {
+        const locals = JSON.parse(localStorage.getItem('mwa_consultations') || '[]');
+        if (locals.length > 0) {
+          locals.forEach(item => {
+            fetch('/api/consultation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(item)
+            }).catch(() => {});
+          });
+        }
+      } catch (_) {}
+
+      loadPortalData();
+      setupExcelFeed();
+      initGoogleAuth();
+    });
+  </script>
+</body>
+</html>

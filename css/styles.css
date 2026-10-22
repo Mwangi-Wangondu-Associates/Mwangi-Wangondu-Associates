@@ -85,22 +85,31 @@ body {
   outline-offset: 2px;
 }
 
-/* Skip link */
+/* Accessible Skip Link */
 .skip-link {
   position: absolute;
-  top: -60px;
+  top: -120px;
   left: 20px;
   background: var(--primary-color);
-  color: #fff;
+  color: #ffffff !important;
   padding: 10px 18px;
   border-radius: var(--radius-sm);
   z-index: 99999;
   text-decoration: none;
   font-weight: 600;
   transition: top var(--transition-fast);
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+  height: 1px;
+  width: 1px;
 }
 .skip-link:focus {
   top: 15px;
+  clip: auto;
+  overflow: visible;
+  height: auto;
+  width: auto;
+  box-shadow: var(--shadow-lg);
 }
 
 h1, h2, h3, h4, h5, h6 {
