@@ -831,71 +831,151 @@ app.get('/api/consultations/export.excel', handleExportCSV);
 // Google Apps Script template endpoint for quick deployment
 app.get('/api/google-sheets-script', (req, res) => {
   const script = `// ============================================================================
-// MWANGI WANGONDU & ASSOCIATES - GOOGLE SHEETS WEB APP RECEIVER
+// MWANGI WANGONDU & ASSOCIATES — LIVE GOOGLE SHEETS & EXCEL SYNC
 // 1. Open your Google Sheet
 // 2. Click Extensions > Apps Script
 // 3. Paste this code into Code.gs and click Save
-// 4. Click Deploy > New deployment > Select type: Web app
-// 5. Execute as: 'Me', Who has access: 'Anyone'
-// 6. Copy the Web App URL and paste it into the Practice Portal settings
+// 4. Click Deploy > Manage Deployments > Edit (or New Deployment)
+//    - Select type: Web app
+//    - Execute as: 'Me'
+//    - Who has access: 'Anyone' (CRITICAL to avoid 401/sign-in blocks)
+// 5. Run 'syncAllExistingConsultations' once to load all past bookings instantly!
 // ============================================================================
 
+function setupSheetHeaders(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "Reference Code",
+      "Timestamp",
+      "Full Name",
+      "Email",
+      "Phone / WhatsApp",
+      "Organization",
+      "Industry Sector",
+      "Primary Service Area",
+      "Format / Mode",
+      "Preferred Date",
+      "Time Window",
+      "Scope Description",
+      "Source"
+    ]);
+    var headerRange = sheet.getRange(1, 1, 1, 13);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#001f3f");
+    headerRange.setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+  }
+}
+
+function processBooking(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupSheetHeaders(sheet);
+
+  var ref = data.referenceCode || ("MWA-BK-" + Utilities.formatDate(new Date(), "GMT+3", "yyyyMM-") + Math.floor(1000 + Math.random() * 9000));
+  
+  sheet.appendRow([
+    ref,
+    data.timestamp || Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    data.fullName || data.name || "",
+    data.email || "",
+    data.phone || "",
+    data.organization || "Not specified",
+    data.sector || "General",
+    data.serviceArea || data.service || "",
+    data.consultationMode || data.mode || "In-Person (Vision Plaza, Nairobi)",
+    data.preferredDate || data.date || "Flexible",
+    data.preferredTimeWindow || data.time || "Business Hours",
+    data.message || "",
+    data.source || "MWA Website"
+  ]);
+
+  return { status: "success", referenceCode: ref, message: "Consultation appended to Google Sheet" };
+}
+
+// Handles POST requests from website forms and server sync
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    
-    // Add header row automatically if sheet is brand new
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Reference Code",
-        "Timestamp",
-        "Full Name",
-        "Email",
-        "Phone / WhatsApp",
-        "Organization",
-        "Industry Sector",
-        "Primary Service Area",
-        "Format / Mode",
-        "Preferred Date",
-        "Time Window",
-        "Scope Description",
-        "Source"
-      ]);
-      var headerRange = sheet.getRange(1, 1, 1, 13);
-      headerRange.setFontWeight("bold");
-      headerRange.setBackground("#001f3f");
-      headerRange.setFontColor("#ffffff");
+    var data = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (err) {
+        data = e.parameter || {};
+      }
+    } else if (e && e.parameter) {
+      data = e.parameter;
     }
-
-    sheet.appendRow([
-      data.referenceCode || "",
-      data.timestamp || new Date().toISOString(),
-      data.fullName || "",
-      data.email || "",
-      data.phone || "",
-      data.organization || "",
-      data.sector || "",
-      data.serviceArea || "",
-      data.consultationMode || "",
-      data.preferredDate || "",
-      data.preferredTimeWindow || "",
-      data.message || "",
-      data.source || "MWA Website"
-    ]);
-
-    return ContentService.createTextOutput(JSON.stringify({
-      status: "success",
-      referenceCode: data.referenceCode,
-      message: "Consultation appended to Google Sheet"
-    })).setMimeType(ContentService.MimeType.JSON);
-
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      status: "error",
-      message: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    
+    var res = processBooking(data);
+    return ContentService.createTextOutput(JSON.stringify(res))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Handles GET requests from web beacons and direct browser test
+function doGet(e) {
+  try {
+    if (e && e.parameter && (e.parameter.name || e.parameter.email || e.parameter.referenceCode)) {
+      var res = processBooking(e.parameter);
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "ready", firm: "Mwangi Wangondu & Associates" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================================================
+// ONE-CLICK PAST BOOKINGS SYNC (Run this once inside Apps Script!)
+// Immediately imports all existing consultations (Daniel Minjire, Dr. Peter Kariuki, etc.)
+// ============================================================================
+function syncAllExistingConsultations() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupSheetHeaders(sheet);
+
+  var url = "https://raw.githubusercontent.com/Mwangi-Wangondu-Associates/Mwangi-Wangondu-Associates/main/data/consultations.json";
+  var res = UrlFetchApp.fetch(url);
+  var bookings = JSON.parse(res.getContentText());
+
+  var existingRefs = {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    var refs = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var i = 0; i < refs.length; i++) {
+      if (refs[i][0]) existingRefs[refs[i][0]] = true;
+    }
+  }
+
+  var importedCount = 0;
+  for (var i = bookings.length - 1; i >= 0; i--) {
+    var b = bookings[i];
+    if (!existingRefs[b.referenceCode]) {
+      sheet.appendRow([
+        b.referenceCode,
+        b.receivedAt || "",
+        b.fullName || b.name || "",
+        b.email || "",
+        b.phone || "",
+        b.organization || "Not specified",
+        b.sector || "General",
+        b.serviceArea || b.service || "",
+        b.consultationMode || "In-Person",
+        b.preferredDate || b.date || "Flexible",
+        b.preferredTimeWindow || b.time || "Business Hours",
+        b.message || "",
+        "MWA Historical Ledger"
+      ]);
+      importedCount++;
+    }
+  }
+
+  SpreadsheetApp.getUi().alert("Import Complete: " + importedCount + " consultations loaded into sheet!");
 }`;
   res.type('text/javascript').send(script);
 });

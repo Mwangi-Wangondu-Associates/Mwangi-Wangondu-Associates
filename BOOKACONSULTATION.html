@@ -571,13 +571,22 @@
           targetUrl.searchParams.set('date', bookingData.preferredDate);
           targetUrl.searchParams.set('time', bookingData.preferredTimeWindow);
           targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
+          targetUrl.searchParams.set('organization', bookingData.organization || 'Not specified');
+          targetUrl.searchParams.set('mode', bookingData.consultationMode || 'In-Person');
           if (bookingData.message) targetUrl.searchParams.set('message', bookingData.message);
 
+          // Use simple text/plain to avoid preflight CORS rejections in browsers
           fetch(targetUrl.toString(), {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(bookingData)
+          }).catch(() => {});
+
+          // Secondary GET dispatch ensures execution even if POST is filtered on mobile/corporate firewalls
+          fetch(targetUrl.toString(), {
+            method: 'GET',
+            mode: 'no-cors'
           }).catch(() => {});
         } catch (_) {} finally {
           isBusy = false;

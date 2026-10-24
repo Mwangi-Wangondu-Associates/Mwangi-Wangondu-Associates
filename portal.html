@@ -478,63 +478,132 @@
                   <div class="card-body p-4">
                     <div class="alert alert-warning py-2 px-3 small border-0 mb-3 rounded-2">
                       <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
-                      <strong>Crucial Setting to Prevent 401 Errors:</strong> In Google Apps Script, ensure <strong>Who has access</strong> is set to <strong>"Anyone"</strong> (NOT "Only myself"). If left as "Only myself", Google blocks automated submissions with an authorization error.
+                      <strong>Crucial Setting to Prevent 401 Errors:</strong> In Google Apps Script, click <strong>Deploy &gt; Manage Deployments &gt; Edit (pencil icon)</strong>, ensure <strong>Who has access</strong> is set to <strong>"Anyone"</strong> and Version is set to <strong>"New version"</strong>. Then click Deploy.
                     </div>
 
                     <ol class="small text-muted ps-3 mb-3">
-                      <li class="mb-2">Open a new Google Sheet at <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a></li>
+                      <li class="mb-2">Open your Google Sheet at <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a></li>
                       <li class="mb-2">Click <strong>Extensions &gt; Apps Script</strong> in the top menu.</li>
-                      <li class="mb-2">Paste the script below into <code>Code.gs</code>, replacing existing content.</li>
-                      <li class="mb-2">Click <strong>Deploy &gt; New deployment</strong>.</li>
-                      <li class="mb-2">Click the gear icon next to "Select type" and choose <strong>Web app</strong>.</li>
-                      <li class="mb-2">Set <strong>Execute as:</strong> <code>Me</code> and <strong>Who has access:</strong> <code>Anyone</code>.</li>
-                      <li class="mb-2">Click <strong>Deploy</strong>, copy the generated Web App URL, and paste it into the configuration on the left.</li>
+                      <li class="mb-2">Paste the script below into <code>Code.gs</code> and click <strong>Save (Floppy Disk icon)</strong>.</li>
+                      <li class="mb-2"><strong>Load all past bookings immediately:</strong> In the function dropdown at the top, select <code>syncAllExistingConsultations</code> and click <strong>Run</strong>. All 16 existing client bookings (including Daniel Minjire, Dr. Peter Kariuki, Esther Mwangi) will appear in your sheet in 2 seconds!</li>
+                      <li class="mb-2">Click <strong>Deploy &gt; New deployment</strong> (or Manage Deployments &gt; Edit).</li>
+                      <li class="mb-2">Select type: <strong>Web app</strong>. Set <strong>Execute as:</strong> <code>Me</code> and <strong>Who has access:</strong> <code>Anyone</code>.</li>
+                      <li class="mb-2">Click <strong>Deploy</strong>, copy the generated Web App URL, and paste it into the Webhook input on the left.</li>
                     </ol>
 
                     <div class="position-relative">
-                      <pre class="bg-dark text-white p-3 rounded-2 small mb-0" style="max-height: 240px; overflow-y: auto;" id="scriptCodeBlock"><code>function doPost(e) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "Reference Code", "Timestamp", "Full Name", "Email", "Phone",
-        "Organization", "Sector", "Service Area", "Format",
-        "Preferred Date", "Time Window", "Message Scope", "Source"
-      ]);
-      var headerRange = sheet.getRange(1, 1, 1, 13);
-      headerRange.setFontWeight("bold");
-      headerRange.setBackground("#001f3f");
-      headerRange.setFontColor("#ffffff");
-    }
-
+                      <pre class="bg-dark text-white p-3 rounded-2 small mb-0" style="max-height: 260px; overflow-y: auto;" id="scriptCodeBlock"><code>function setupSheetHeaders(sheet) {
+  if (sheet.getLastRow() === 0) {
     sheet.appendRow([
-      data.referenceCode || "",
-      data.timestamp || new Date().toISOString(),
-      data.fullName || data.name || "",
-      data.email || "",
-      data.phone || "",
-      data.organization || "Not specified",
-      data.sector || "General",
-      data.serviceArea || data.service || "",
-      data.consultationMode || "In-Person (Vision Plaza, Nairobi)",
-      data.preferredDate || data.date || "",
-      data.preferredTimeWindow || data.time || "",
-      data.message || "",
-      data.source || "MWA Website"
+      "Reference Code", "Timestamp", "Full Name", "Email", "Phone / WhatsApp",
+      "Organization", "Industry Sector", "Primary Service Area", "Format / Mode",
+      "Preferred Date", "Time Window", "Scope Description", "Source"
     ]);
-
-    return ContentService.createTextOutput(JSON.stringify({
-      status: "success",
-      referenceCode: data.referenceCode
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      status: "error",
-      message: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    var headerRange = sheet.getRange(1, 1, 1, 13);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#001f3f");
+    headerRange.setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
   }
+}
+
+function processBooking(data) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupSheetHeaders(sheet);
+
+  var ref = data.referenceCode || ("MWA-BK-" + Utilities.formatDate(new Date(), "GMT+3", "yyyyMM-") + Math.floor(1000 + Math.random() * 9000));
+  
+  sheet.appendRow([
+    ref,
+    data.timestamp || Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    data.fullName || data.name || "",
+    data.email || "",
+    data.phone || "",
+    data.organization || "Not specified",
+    data.sector || "General",
+    data.serviceArea || data.service || "",
+    data.consultationMode || data.mode || "In-Person (Vision Plaza, Nairobi)",
+    data.preferredDate || data.date || "Flexible",
+    data.preferredTimeWindow || data.time || "Business Hours",
+    data.message || "",
+    data.source || "MWA Website"
+  ]);
+
+  return { status: "success", referenceCode: ref, message: "Consultation appended to Google Sheet" };
+}
+
+function doPost(e) {
+  try {
+    var data = {};
+    if (e && e.postData && e.postData.contents) {
+      try { data = JSON.parse(e.postData.contents); } catch (err) { data = e.parameter || {}; }
+    } else if (e && e.parameter) {
+      data = e.parameter;
+    }
+    var res = processBooking(data);
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    if (e && e.parameter && (e.parameter.name || e.parameter.email || e.parameter.referenceCode)) {
+      var res = processBooking(e.parameter);
+      return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: "ready", firm: "Mwangi Wangondu & Associates" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ============================================================================
+// ONE-CLICK PAST BOOKINGS SYNC (Run this function once inside Apps Script!)
+// Immediately imports all existing consultations into your Google Sheet!
+// ============================================================================
+function syncAllExistingConsultations() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupSheetHeaders(sheet);
+
+  var url = "https://raw.githubusercontent.com/Mwangi-Wangondu-Associates/Mwangi-Wangondu-Associates/main/data/consultations.json";
+  var res = UrlFetchApp.fetch(url);
+  var bookings = JSON.parse(res.getContentText());
+
+  var existingRefs = {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    var refs = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var i = 0; i < refs.length; i++) {
+      if (refs[i][0]) existingRefs[refs[i][0]] = true;
+    }
+  }
+
+  var importedCount = 0;
+  for (var i = bookings.length - 1; i >= 0; i--) {
+    var b = bookings[i];
+    if (!existingRefs[b.referenceCode]) {
+      sheet.appendRow([
+        b.referenceCode,
+        b.receivedAt || "",
+        b.fullName || b.name || "",
+        b.email || "",
+        b.phone || "",
+        b.organization || "Not specified",
+        b.sector || "General",
+        b.serviceArea || b.service || "",
+        b.consultationMode || "In-Person",
+        b.preferredDate || b.date || "Flexible",
+        b.preferredTimeWindow || b.time || "Business Hours",
+        b.message || "",
+        "MWA Historical Ledger"
+      ]);
+      importedCount++;
+    }
+  }
+
+  SpreadsheetApp.getUi().alert("Import Complete: " + importedCount + " consultations loaded into sheet!");
 }</code></pre>
                     </div>
                   </div>
@@ -597,33 +666,39 @@
 
                     <div class="border rounded-3 p-3 mb-3 bg-light">
                       <div class="fw-bold small text-dark mb-1">
-                        <i class="bi bi-star-fill text-warning me-1"></i> Path A: Google Sheets &rarr; Excel Auto-Sync (Easiest)
+                        <i class="bi bi-star-fill text-warning me-1"></i> Path A: Direct Public CSV Live Feed (Instant &amp; Most Reliable)
+                      </div>
+                      <p class="small text-muted mb-2">
+                        Query this permanent public raw feed directly in Microsoft Excel — no Google login or Apps Script permissions required:
+                      </p>
+                      <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control font-monospace" id="directRawCsvUrl" readonly value="https://raw.githubusercontent.com/Mwangi-Wangondu-Associates/Mwangi-Wangondu-Associates/main/consultations.csv">
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('directRawCsvUrl').value); alert('Copied Direct Excel CSV Feed URL!');">
+                          <i class="bi bi-clipboard me-1"></i> Copy URL
+                        </button>
                       </div>
                       <ol class="small text-muted ps-3 mb-0">
-                        <li class="mb-1">In your Google Sheet, click <strong>File &gt; Share &gt; Publish to web</strong>.</li>
-                        <li class="mb-1">Select <strong>Entire Document</strong> and change "Web page" to <strong>Comma-separated values (.csv)</strong>, then click <strong>Publish</strong>.</li>
-                        <li class="mb-1">Copy the published link. In Excel, click <strong>Data &gt; From Web</strong> and paste that link.</li>
-                        <li class="mb-1">In Excel's Data Connection properties, check <strong>"Refresh every 5 minutes"</strong>.</li>
-                        <li><strong>Result:</strong> Whenever a client books on the site, the sheet updates instantly, and your Excel spreadsheet updates itself automatically!</li>
+                        <li class="mb-1">In Microsoft Excel, click <strong>Data &gt; From Web</strong>.</li>
+                        <li class="mb-1">Paste the URL above and click <strong>OK &gt; Load</strong>.</li>
+                        <li class="mb-1">Under <em>Queries &amp; Connections</em> &gt; Properties, check <strong>"Refresh every 5 minutes"</strong>.</li>
+                        <li><strong>Result:</strong> All 16 consultations (including Daniel Minjire, Dr. Peter Kariuki, Esther Mwangi) load immediately into Excel!</li>
                       </ol>
                     </div>
 
-                    <div class="border rounded-3 p-3 bg-light">
+                    <div class="border rounded-3 p-3 mb-3 bg-light">
                       <div class="fw-bold small text-dark mb-1">
-                        <i class="bi bi-globe me-1"></i> Path B: Direct Excel Web Query (When Production Domain is Live)
+                        <i class="bi bi-file-earmark-spreadsheet text-success me-1"></i> Path B: Connected Google Sheet &rarr; Excel Sync
                       </div>
                       <p class="small text-muted mb-2">
-                        Desktop Excel showed <em>"Unable to connect to the remote server"</em> because the development preview domain is protected. Once your website is on your live domain (e.g., <code>https://mwangiandwangonduassociates.com</code>), you can paste:
+                        If your Excel query showed <em>"0 rows loaded"</em> from <code>pub?output=csv</code>, your Google Sheet has not yet received rows because Apps Script requires public access:
                       </p>
-                      <div class="input-group mb-2">
-                        <input type="text" class="form-control form-control-sm font-monospace" id="excelLiveFeedUrl" readonly value="">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="copyExcelFeedBtn">
-                          <i class="bi bi-clipboard me-1"></i> Copy
-                        </button>
-                      </div>
-                      <div class="small text-muted">
-                        In Excel: <strong>Data &gt; From Web &gt; paste URL &gt; Refresh All</strong>.
-                      </div>
+                      <ol class="small text-muted ps-3 mb-0">
+                        <li class="mb-1">Open your Google Sheet at <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pubhtml" target="_blank" rel="noopener">Your Connected Sheet</a>.</li>
+                        <li class="mb-1">Click <strong>Extensions &gt; Apps Script</strong>.</li>
+                        <li class="mb-1">Under function dropdown, select <code>syncAllExistingConsultations</code> and click <strong>Run</strong>. (This immediately fills all 16 rows into your Google Sheet).</li>
+                        <li class="mb-1">Click <strong>Deploy &gt; Manage Deployments &gt; Edit (pencil)</strong> &gt; set <strong>Who has access: "Anyone"</strong> &gt; <strong>Deploy</strong>.</li>
+                        <li>Return to Microsoft Excel and click <strong>Refresh All</strong>!</li>
+                      </ol>
                     </div>
                   </div>
                 </div>
