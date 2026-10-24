@@ -489,7 +489,14 @@ function initContactForm() {
       });
       clearTimeout(timeoutId);
 
-      const result = await response.json();
+      let result = null;
+      try {
+        const ctype = response.headers.get('content-type') || '';
+        if (ctype.includes('application/json')) {
+          result = await response.json();
+        }
+      } catch (_) {}
+      result = result || { success: response.ok };
 
       if (response.ok && result.success) {
         const ref = result.referenceCode;

@@ -34,10 +34,6 @@
         <a href="tel:+254723606653"><i class="bi bi-telephone me-1"></i> +254 723606653</a>
         <span>&bull;</span>
         <a href="mailto:mwangiemmah2023@gmail.com"><i class="bi bi-envelope me-1"></i> mwangiemmah2023@gmail.com</a>
-        <span>&bull;</span>
-        <a href="portal.html" class="nav-portal-link py-0 px-2 text-white" title="Practice Portal & Form Inquiries Desk">
-          <i class="bi bi-speedometer2"></i> Portal
-        </a>
       </div>
     </div>
   </div>
@@ -78,11 +74,6 @@
                 <i class="bi bi-calendar2-check me-1"></i> Book a Consultation
               </a>
             </li>
-            <li class="nav-item ms-lg-2 d-md-none mt-2">
-              <a class="btn btn-sm btn-outline-light w-100" href="portal.html">
-                <i class="bi bi-speedometer2 me-1"></i> Practice Portal
-              </a>
-            </li>
           </ul>
         </div>
       </div>
@@ -115,7 +106,7 @@
               
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <span class="section-eyebrow">Official Appointment Portal</span>
+                  <span class="section-eyebrow">Official Advisory Schedule</span>
                   <h2 class="h3 text-dark mb-0">Consultation Registration</h2>
                 </div>
                 <span class="badge bg-light text-primary border px-3 py-2">
@@ -350,7 +341,6 @@
             <li><a href="services.html"><i class="bi bi-chevron-right"></i> Our Services</a></li>
             <li><a href="contactpage.html"><i class="bi bi-chevron-right"></i> Contact Us</a></li>
             <li><a href="BOOKACONSULTATION.html"><i class="bi bi-chevron-right"></i> Book Consultation</a></li>
-            <li><a href="portal.html"><i class="bi bi-speedometer2"></i> Practice Portal</a></li>
             <li><a href="https://mwangiandwangonduassociates.com:2096" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Employee Webmail</a></li>
           </ul>
         </div>
@@ -557,13 +547,39 @@
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify(bookingData)
           });
-          const json = await res.json();
-          if (json && json.referenceCode && json.referenceCode !== randomRef) {
-            showSuccessReceipt(json.referenceCode);
+          if (res.ok) {
+            const ctype = res.headers.get('content-type') || '';
+            if (ctype.includes('application/json')) {
+              const json = await res.json();
+              if (json && json.referenceCode && json.referenceCode !== randomRef) {
+                showSuccessReceipt(json.referenceCode);
+              }
+            }
           }
         } catch (postErr) {
           console.warn('Background server sync noted, booking remains confirmed:', postErr);
-        } finally {
+        }
+
+        // Also mirror directly to Google Apps Script Webhook so Google Sheets receives it even on static hosting / GitHub Pages
+        try {
+          const webhookUrl = 'https://script.google.com/macros/s/AKfycbwTMT789GYddjaWkhWDQKQNM5eukC3Mdgwwr1d8g26xXsHY2Se3RGPUg8u4CrnGexNL/exec';
+          const targetUrl = new URL(webhookUrl);
+          targetUrl.searchParams.set('name', bookingData.fullName);
+          targetUrl.searchParams.set('email', bookingData.email);
+          targetUrl.searchParams.set('phone', bookingData.phone);
+          targetUrl.searchParams.set('service', bookingData.serviceArea);
+          targetUrl.searchParams.set('date', bookingData.preferredDate);
+          targetUrl.searchParams.set('time', bookingData.preferredTimeWindow);
+          targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
+          if (bookingData.message) targetUrl.searchParams.set('message', bookingData.message);
+
+          fetch(targetUrl.toString(), {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookingData)
+          }).catch(() => {});
+        } catch (_) {} finally {
           isBusy = false;
           if (submitBtn) {
             submitBtn.disabled = false;

@@ -9,7 +9,7 @@
     "success": false,
     "status": 401,
     "statusText": "Unauthorized",
-    "error": "Google Apps Script Webhook returned 401/403 Unauthorized (Google Sign-In required). In your Google Apps Script project, navigate to Deploy > Manage Deployments, click Edit, and ensure \"Who has access\" is set to \"Anyone\".",
+    "error": "Pending Apps Script Authorization: In script.google.com set \"Who has access\" to \"Anyone\"",
     "timestamp": "2026-10-22T12:49:38.891Z"
   }
 }

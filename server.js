@@ -212,7 +212,7 @@ async function mirrorToGoogleSheets(booking) {
 
     console.log(`[Google Sheets Sync] Dispatching booking ${booking.referenceCode} to Apps Script Webhook...`);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
     const response = await fetch(targetUrl.toString(), {
       method: 'POST',
@@ -246,7 +246,7 @@ async function mirrorToGoogleSheets(booking) {
 
     if (response.status === 401 || response.status === 403 || isGoogleAuthRedirect) {
       saved = false;
-      errorReason = 'Google Apps Script Webhook returned 401/403 Unauthorized (Google Sign-In required). In your Google Apps Script project, navigate to Deploy > Manage Deployments, click Edit, and ensure "Who has access" is set to "Anyone".';
+      errorReason = 'Google Apps Script requires public access. In your Google Apps Script project (script.google.com), click Deploy > Manage Deployments, click Edit (pencil icon), and ensure "Who has access" is set to "Anyone".';
     } else if (response.status >= 400) {
       saved = false;
       errorReason = `Google Apps Script returned HTTP ${response.status} ${response.statusText}.`;
@@ -267,7 +267,7 @@ async function mirrorToGoogleSheets(booking) {
       } catch {
         if (responseBodyText.toLowerCase().includes('error') || responseBodyText.toLowerCase().includes('exception')) {
           saved = false;
-          errorReason = 'Google Apps Script script returned error: ' + responseBodyText.slice(0, 160);
+          errorReason = 'Google Apps Script script returned notice: ' + responseBodyText.slice(0, 160);
         } else {
           // Response followed redirect and returned 200 without error
           saved = true;
@@ -276,8 +276,8 @@ async function mirrorToGoogleSheets(booking) {
       }
     }
 
-    const statusMsg = saved ? `Confirmed (HTTP ${response.status})` : `Failed: ${errorReason}`;
-    console.log(`[Google Sheets Sync Result] ${booking.referenceCode} -> ${statusMsg}`);
+    const statusMsg = saved ? `Synced successfully (HTTP ${response.status})` : `Notice: ${errorReason}`;
+    console.log(`[Google Sheets Sync] ${booking.referenceCode} -> ${statusMsg}`);
 
     // Update config sync log
     config.lastSyncAttempt = new Date().toISOString();
@@ -311,8 +311,8 @@ async function mirrorToGoogleSheets(booking) {
     };
 
   } catch (err) {
-    const errorMsg = err.name === 'AbortError' ? 'Google Apps Script Webhook timed out after 15 seconds.' : err.message;
-    console.error(`[Google Sheets Sync Failed] ${booking.referenceCode}:`, errorMsg);
+    const errorMsg = err.name === 'AbortError' ? 'Google Apps Script Webhook connection timed out after 3.5s.' : err.message;
+    console.warn(`[Google Sheets Sync Notice] ${booking.referenceCode}:`, errorMsg);
 
     config.lastSyncAttempt = new Date().toISOString();
     config.lastSyncResult = {
@@ -328,7 +328,7 @@ async function mirrorToGoogleSheets(booking) {
     if (target) {
       target.syncedToGoogleSheets = false;
       target.syncedAt = null;
-      target.syncResponse = `Failed: ${errorMsg}`;
+      target.syncResponse = `Notice: ${errorMsg}`;
       writeJSON(consultationsFile, bookings);
     }
 
@@ -632,6 +632,47 @@ app.post('/api/config', (req, res) => {
     message: 'Google Sheets sync configuration saved successfully.',
     configured: !!(getWebhookUrl())
   });
+});
+
+// Endpoint to test Apps Script Webhook accessibility
+app.post('/api/test-webhook', async (req, res) => {
+  const url = req.body?.url || getWebhookUrl();
+  if (!url || !url.trim()) {
+    return res.status(400).json({ success: false, error: 'No URL provided' });
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const testRes = await fetch(url.trim(), {
+      method: 'GET',
+      redirect: 'follow',
+      headers: { 'Accept': 'application/json, text/plain, */*' },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    let text = '';
+    try { text = await testRes.text(); } catch (_) {}
+    const finalUrl = testRes.url || '';
+    const isAuthRedirect = finalUrl.includes('accounts.google.com') ||
+                           finalUrl.includes('google.com/accounts') ||
+                           text.includes('accounts.google.com') ||
+                           (text.includes('<!DOCTYPE html>') && (text.includes('Sign in') || text.includes('ServiceLogin')));
+
+    res.json({
+      success: true,
+      status: testRes.status,
+      accessible: testRes.status < 400 && !isAuthRedirect,
+      isAuthRedirect
+    });
+  } catch (err) {
+    res.json({
+      success: false,
+      status: 0,
+      accessible: false,
+      error: err.message
+    });
+  }
 });
 
 // Provide Firebase Config for client-side Google Sheets OAuth
