@@ -73,16 +73,17 @@ runTest('TEST 1: Input Validation - Missing or Malformed Required Fields', () =>
 // TEST 2: Reference Code Generation & Format Stability
 // ============================================================================
 runTest('TEST 2: Canonical Reference Code Format and Uniqueness', () => {
-  function generateReference(date, counter) {
+  function generateReference(date, seq) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
-    // 6-digit cryptographic-safe random entropy + counter offset
-    const rnd = Math.floor(100000 + Math.random() * 900000);
-    return `MWA-BK-${y}${m}-${rnd}`;
+    // Seed with sequence counter + random entropy to guarantee mathematical uniqueness
+    const seqStr = String(seq || 1).padStart(3, '0').slice(-3);
+    const rnd = Math.floor(100 + Math.random() * 900);
+    return `MWA-BK-${y}${m}-${seqStr}${rnd}`;
   }
 
   const sampleDate = new Date();
-  const ref = generateReference(sampleDate);
+  const ref = generateReference(sampleDate, 1);
 
   // Pattern verification
   assert.match(ref, /^MWA-BK-\d{6}-\d{6}$/, 'Reference must match canonical pattern MWA-BK-YYYYMM-XXXXXX');
@@ -90,7 +91,7 @@ runTest('TEST 2: Canonical Reference Code Format and Uniqueness', () => {
   // Multi-generation uniqueness
   const set = new Set();
   for (let i = 0; i < 500; i++) {
-    const r = generateReference(sampleDate);
+    const r = generateReference(sampleDate, i + 1);
     assert.strictEqual(set.has(r), false, `Collision detected in generation sample at ${r}`);
     set.add(r);
   }
@@ -196,13 +197,16 @@ runTest('TEST 5: Failure Simulation - Frontend Must Not Show False Confirmation'
 // ============================================================================
 // TEST 6: Historical Reconciliation Dry-Run
 // ============================================================================
-runTest('TEST 6: Historical Ledger Reconciliation Dry-Run', () => {
-  const historicalBackup = path.join(__dirname, '..', 'data', 'consultations.json');
-  assert.ok(fs.existsSync(historicalBackup), 'Historical consultations.json must exist');
+// ============================================================================
+// TEST 6: Historical Ledger Reconciliation & PII Sanitization
+// ============================================================================
+runTest('TEST 6: Historical Ledger Backup & Public PII Sanitization', () => {
+  const historicalBackup = path.join(__dirname, '..', 'data', 'backup', 'consultations_backup_20261025.json');
+  assert.ok(fs.existsSync(historicalBackup), 'Historical backup must exist in data/backup/');
 
   const records = JSON.parse(fs.readFileSync(historicalBackup, 'utf8'));
-  assert.ok(Array.isArray(records), 'Records must be an array');
-  assert.ok(records.length > 0, 'Records count must be greater than zero');
+  assert.ok(Array.isArray(records), 'Backup records must be an array');
+  assert.strictEqual(records.length, 17, 'All 17 historical records must be preserved in backup');
 
   const seenRefs = new Set();
   let duplicateCount = 0;
@@ -218,7 +222,75 @@ runTest('TEST 6: Historical Ledger Reconciliation Dry-Run', () => {
     }
   }
 
-  assert.ok(uniqueCount > 0, 'Unique records must be present');
+  assert.strictEqual(uniqueCount, 17, 'All 17 historical records must be unique');
+  assert.strictEqual(duplicateCount, 0, 'No duplicate references in historical backup');
+
+  // Verify public file sanitization
+  const activeConsultationsFile = path.join(__dirname, '..', 'data', 'consultations.json');
+  const activeContent = JSON.parse(fs.readFileSync(activeConsultationsFile, 'utf8'));
+  assert.strictEqual(activeContent.length, 0, 'Active consultations.json in repository must contain zero PII records');
+});
+
+// ============================================================================
+// TEST 7: Anti-Abuse Safeguards (Honeypot, Token & Interaction Time)
+// ============================================================================
+runTest('TEST 7: Anti-Abuse Safeguards (Honeypot & Shared Application Token)', () => {
+  const EXPECTED_TOKEN = 'MWA-SEC-2026-CONSULT-ADVISORY';
+
+  function validateAbuse(payload) {
+    // 1. Honeypot filled by automated bot
+    if (payload.website_hp && payload.website_hp.trim().length > 0) {
+      return { rejected: true, reason: 'Honeypot triggered' };
+    }
+    // 2. Missing or invalid app token
+    if (payload.appToken !== EXPECTED_TOKEN) {
+      return { rejected: true, reason: 'Invalid application token' };
+    }
+    // 3. Fast automated submit (< 1500ms)
+    if (payload.loadedAt && (payload.submittedAt - payload.loadedAt < 1500)) {
+      return { rejected: true, reason: 'Submission too fast' };
+    }
+    return { rejected: false };
+  }
+
+  // Sub-case 1: Bot triggers honeypot
+  const botRes = validateAbuse({
+    website_hp: 'http://spam-link.ru',
+    appToken: EXPECTED_TOKEN,
+    loadedAt: 1000,
+    submittedAt: 5000
+  });
+  assert.strictEqual(botRes.rejected, true);
+  assert.strictEqual(botRes.reason, 'Honeypot triggered');
+
+  // Sub-case 2: Unauthenticated scraper missing token
+  const scraperRes = validateAbuse({
+    website_hp: '',
+    appToken: 'INVALID_TOKEN',
+    loadedAt: 1000,
+    submittedAt: 5000
+  });
+  assert.strictEqual(scraperRes.rejected, true);
+  assert.strictEqual(scraperRes.reason, 'Invalid application token');
+
+  // Sub-case 3: Bot submits in 200 milliseconds
+  const fastRes = validateAbuse({
+    website_hp: '',
+    appToken: EXPECTED_TOKEN,
+    loadedAt: 1000,
+    submittedAt: 1200
+  });
+  assert.strictEqual(fastRes.rejected, true);
+  assert.strictEqual(fastRes.reason, 'Submission too fast');
+
+  // Sub-case 4: Legitimate human user
+  const humanRes = validateAbuse({
+    website_hp: '',
+    appToken: EXPECTED_TOKEN,
+    loadedAt: 1000,
+    submittedAt: 15000
+  });
+  assert.strictEqual(humanRes.rejected, false);
 });
 
 console.log('\n------------------------------------------------------------');

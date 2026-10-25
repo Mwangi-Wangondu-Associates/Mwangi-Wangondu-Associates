@@ -122,6 +122,10 @@
               <div id="consultationFeedback" class="form-feedback-box" role="alert"></div>
 
               <form id="consultationBookingForm" action="/api/consultation" method="POST" novalidate>
+                <!-- Security & Anti-Spam Safeguards -->
+                <input type="text" name="website_hp" id="website_hp" style="display:none !important;" tabindex="-1" autocomplete="off" aria-hidden="true">
+                <input type="hidden" name="appToken" id="appToken" value="MWA-SEC-2026-CONSULT-ADVISORY">
+
                 <!-- Field aliases matching required fields: name, service, date, time -->
                 <input type="hidden" name="name" id="nameAlias" value="">
                 <input type="hidden" name="service" id="serviceAlias" value="">
@@ -400,6 +404,9 @@
   <script src="/js/site.js?v=20261022-v3-bypass"></script>
   <script>
     (function() {
+      // Record form initialization timestamp for anti-bot validation
+      const formLoadedAt = Date.now();
+
       // Direct, fail-proof consultation submit handler with top-level priority
       const form = document.getElementById('consultationBookingForm');
       if (!form) return;
@@ -422,6 +429,13 @@
         e.stopPropagation();
 
         if (isBusy) return;
+
+        // Anti-abuse honeypot check
+        const honeypotVal = (document.getElementById('website_hp')?.value || '').trim();
+        if (honeypotVal) {
+          console.warn('Bot submission suppressed via honeypot.');
+          return;
+        }
 
         const fullName = (document.getElementById('fullName')?.value || '').trim();
         const email = (document.getElementById('email')?.value || '').trim();
@@ -633,6 +647,9 @@
               targetUrl.searchParams.set('preferredDate', bookingData.preferredDate);
               targetUrl.searchParams.set('preferredTimeWindow', bookingData.preferredTimeWindow);
               targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
+              targetUrl.searchParams.set('appToken', 'MWA-SEC-2026-CONSULT-ADVISORY');
+              targetUrl.searchParams.set('loadedAt', String(formLoadedAt));
+              if (honeypotVal) targetUrl.searchParams.set('website_hp', honeypotVal);
               if (bookingData.message) targetUrl.searchParams.set('message', bookingData.message);
 
               const gasResponse = await fetch(targetUrl.toString(), {
