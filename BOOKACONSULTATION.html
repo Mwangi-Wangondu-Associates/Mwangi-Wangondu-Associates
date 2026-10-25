@@ -122,9 +122,10 @@
               <div id="consultationFeedback" class="form-feedback-box" role="alert"></div>
 
               <form id="consultationBookingForm" action="/api/consultation" method="POST" novalidate>
-                <!-- Security & Anti-Spam Safeguards -->
+                <!-- Security & Anti-Spam Safeguards (Origin token is a public client check, not a secret) -->
                 <input type="text" name="website_hp" id="website_hp" style="display:none !important;" tabindex="-1" autocomplete="off" aria-hidden="true">
                 <input type="hidden" name="appToken" id="appToken" value="MWA-SEC-2026-CONSULT-ADVISORY">
+                <input type="hidden" name="idempotencyKey" id="idempotencyKey" value="">
 
                 <!-- Field aliases matching required fields: name, service, date, time -->
                 <input type="hidden" name="name" id="nameAlias" value="">
@@ -407,12 +408,21 @@
       // Record form initialization timestamp for anti-bot validation
       const formLoadedAt = Date.now();
 
+      // Session attempt tracking for idempotent retries (reused across retries until confirmed)
+      let currentAttemptIdempotencyKey = null;
+      let currentAttemptClientRef = null;
+
       // Direct, fail-proof consultation submit handler with top-level priority
       const form = document.getElementById('consultationBookingForm');
       if (!form) return;
 
       const feedbackBox = document.getElementById('consultationFeedback');
       let isBusy = false;
+
+      form.addEventListener('reset', function() {
+        currentAttemptIdempotencyKey = null;
+        currentAttemptClientRef = null;
+      });
 
       function escapeText(str) {
         if (!str) return '';
@@ -500,11 +510,21 @@
           feedbackBox.innerHTML = '<div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm text-primary"></span> <span>Connecting to Mwangi Wangondu &amp; Associates advisory desk...</span></div>';
         }
 
+        // Establish stable attempt idempotency key and reference (persists on retry until confirmed)
+        if (!currentAttemptIdempotencyKey) {
+          const nowMs = Date.now();
+          currentAttemptIdempotencyKey = 'IDEM-' + nowMs + '-' + Math.random().toString(36).slice(2, 10);
+          const nowDate = new Date(nowMs);
+          currentAttemptClientRef = 'MWA-BK-' + nowDate.getFullYear() + String(nowDate.getMonth() + 1).padStart(2, '0') + '-' + Math.floor(100000 + Math.random() * 900000);
+        }
+
+        const clientRef = currentAttemptClientRef;
+        const idempotencyKey = currentAttemptIdempotencyKey;
         const now = new Date();
-        const clientRef = 'MWA-BK-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + '-' + Math.floor(100000 + Math.random() * 900000);
 
         const bookingData = {
           referenceCode: clientRef,
+          idempotencyKey: idempotencyKey,
           name: fullName,
           fullName: fullName,
           email: email,
@@ -525,6 +545,10 @@
         };
 
         function renderConfirmedReceipt(confirmedRef, noticeMsg) {
+          // Reset attempt keys on verified confirmation
+          currentAttemptIdempotencyKey = null;
+          currentAttemptClientRef = null;
+
           if (!feedbackBox) return;
           feedbackBox.className = 'form-feedback-box success';
           feedbackBox.style.display = 'block';
@@ -569,7 +593,7 @@
               <div><i class="bi bi-envelope-fill text-primary me-2"></i> Direct Partner Email: <a href="mailto:mwangiemmah2023@gmail.com" class="fw-bold">mwangiemmah2023@gmail.com</a></div>
               <div><i class="bi bi-geo-alt-fill text-primary me-2"></i> Practice Office: Vision Plaza, Nairobi &bull; Kitengela Branch</div>
             </div>
-            ${canRetry ? '<p class="text-muted small mb-0">You may also retry submitting below.</p>' : ''}
+            ${canRetry ? '<p class="text-muted small mb-0">You may also retry submitting below (your booking reference is preserved).</p>' : ''}
           `;
           feedbackBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -587,7 +611,7 @@
               Your appointment request was dispatched under reference <strong>${escapeText(referenceCode)}</strong>, but the verification receipt timed out over the network.
             </p>
             <div class="small p-2 bg-light rounded border mb-2">
-              <strong>Please do not submit repeatedly.</strong> If your browser experienced a network interruption, our practice desk may already have logged your request.
+              <strong>If you click retry, your request will be safely deduplicated.</strong> Our practice desk may also already have registered your request.
             </div>
             <div class="small text-muted">
               To immediately confirm appointment placement, please call or WhatsApp <a href="tel:+254723606653" class="fw-bold text-primary">+254 723606653</a> quoting reference <strong>${escapeText(referenceCode)}</strong>.
@@ -647,6 +671,7 @@
               targetUrl.searchParams.set('preferredDate', bookingData.preferredDate);
               targetUrl.searchParams.set('preferredTimeWindow', bookingData.preferredTimeWindow);
               targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
+              targetUrl.searchParams.set('idempotencyKey', bookingData.idempotencyKey);
               targetUrl.searchParams.set('appToken', 'MWA-SEC-2026-CONSULT-ADVISORY');
               targetUrl.searchParams.set('loadedAt', String(formLoadedAt));
               if (honeypotVal) targetUrl.searchParams.set('website_hp', honeypotVal);

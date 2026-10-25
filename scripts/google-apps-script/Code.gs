@@ -1,20 +1,22 @@
 // ============================================================================
 // MWANGI WANGONDU & ASSOCIATES (CPA-K)
 // PRODUCTION GOOGLE APPS SCRIPT CONSULTATION BOOKING RECEIVER & LEDGER
-// Version: 3.0.0-hardened (Abuse-Protected, Rate-Limited, Concurrency-Locked)
+// Version: 3.1.0-hardened (UTC-Standardized, Robust Idempotency, Concurrency-Locked)
 // ============================================================================
-// SECURITY SAFEGUARDS:
-// 1. Shared App Token: Validates expected client token to block random web crawlers.
+// SECURITY & DATA INTEGRITY SAFEGUARDS:
+// 1. App Origin Token: Origin sanity check to filter generic web crawlers (public identifier).
 // 2. Honeypot Detection: Silently rejects automated bots filling hidden honeypot fields.
 // 3. Rate Limiting: Enforces max 3 submissions per email/IP per 30 minutes via CacheService.
 // 4. Strict Sanitization: HTML tag stripping and character length constraints.
 // 5. Zero Public Reads: Blocks all requests attempting to query or list stored consultations.
 // 6. Concurrency Locking: Uses LockService to serialize simultaneous writes.
+// 7. Robust Idempotency: Uses client idempotencyKey and email+service+date deduplication cache.
+// 8. Genuine UTC Timestamps: Uses standard ISO-8601 UTC (YYYY-MM-DDTHH:mm:ss.sssZ).
 // ============================================================================
 
 var SHEET_NAME = "Consultations";
 
-// Application verification token (must match client submission token)
+// Application verification token (public origin sanity check, not a secret credential)
 var EXPECTED_APP_TOKEN = "MWA-SEC-2026-CONSULT-ADVISORY";
 
 // Maximum length constraints
@@ -23,10 +25,11 @@ var MAX_EMAIL_LENGTH = 120;
 var MAX_PHONE_LENGTH = 30;
 var MAX_ORG_LENGTH = 120;
 var MAX_MESSAGE_LENGTH = 1500;
+var MAX_IDEMPOTENCY_KEY_LENGTH = 64;
 
 var CANONICAL_HEADERS = [
   "Reference Code",
-  "Timestamp (UTC+3)",
+  "Timestamp (UTC)",
   "Full Name",
   "Email Address",
   "Telephone / WhatsApp",
@@ -132,7 +135,7 @@ function validateBookingPayload(data) {
     }
   }
 
-  // 3. Shared Application Token check
+  // 3. Shared Application Token check (Public origin sanity check)
   if (data.appToken !== EXPECTED_APP_TOKEN) {
     return {
       valid: false,
@@ -189,13 +192,14 @@ function validateBookingPayload(data) {
       preferredDate: sanitizeText(data.preferredDate || data.date || "Flexible / Earliest Available", 50),
       preferredTimeWindow: sanitizeText(data.preferredTimeWindow || data.time || "Business Hours (08:30 - 17:00 EAT)", 50),
       message: sanitizeText(data.message || "", MAX_MESSAGE_LENGTH),
-      referenceCode: sanitizeText(data.referenceCode || "", 40)
+      referenceCode: sanitizeText(data.referenceCode || "", 40),
+      idempotencyKey: sanitizeText(data.idempotencyKey || "", MAX_IDEMPOTENCY_KEY_LENGTH)
     }
   };
 }
 
 /**
- * Handles incoming booking registration with concurrency locking and deduplication.
+ * Handles incoming booking registration with concurrency locking and robust idempotency.
  */
 function handleBookingSubmission(rawPayload) {
   var lock = LockService.getScriptLock();
@@ -220,10 +224,39 @@ function handleBookingSubmission(rawPayload) {
     }
 
     var clean = validation.sanitized;
+    var cache = CacheService.getScriptCache();
+
+    // 1. Check idempotency key in cache (fast retry deduplication)
+    if (clean.idempotencyKey) {
+      var cachedRefByIdem = cache.get("idem_" + clean.idempotencyKey.substring(0, 50));
+      if (cachedRefByIdem) {
+        return {
+          success: true,
+          status: "confirmed",
+          duplicate: true,
+          referenceCode: cachedRefByIdem,
+          message: "Consultation previously registered and confirmed in practice ledger (idempotent retry)."
+        };
+      }
+    }
+
+    // 2. Check semantic deduplication cache (email + serviceArea + preferredDate within 30 min)
+    var semanticKey = "dedup_" + Utilities.base64Encode(clean.email + "|" + clean.serviceArea + "|" + clean.preferredDate).substring(0, 50);
+    var cachedRefBySemantic = cache.get(semanticKey);
+    if (cachedRefBySemantic) {
+      return {
+        success: true,
+        status: "confirmed",
+        duplicate: true,
+        referenceCode: cachedRefBySemantic,
+        message: "An identical consultation booking was recently confirmed for this client."
+      };
+    }
+
     var sheet = getOrCreateSheet();
     var lastRow = sheet.getLastRow();
     
-    // Check for duplicate reference
+    // 3. Check for existing reference in sheet
     if (lastRow > 1) {
       var existingData = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
       for (var i = 0; i < existingData.length; i++) {
@@ -248,7 +281,8 @@ function handleBookingSubmission(rawPayload) {
       finalRef = "MWA-BK-" + datePrefix + "-" + randomSuffix;
     }
 
-    var timestampIso = Utilities.formatDate(now, "GMT+3", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+    // Genuine UTC ISO-8601 timestamp (e.g. 2026-10-25T12:00:00.000Z)
+    var timestampIso = now.toISOString();
 
     var rowValues = [
       finalRef,
@@ -269,6 +303,12 @@ function handleBookingSubmission(rawPayload) {
 
     sheet.appendRow(rowValues);
     SpreadsheetApp.flush(); // Ensure immediate write
+
+    // Record idempotency and semantic deduplication in cache
+    if (clean.idempotencyKey) {
+      cache.put("idem_" + clean.idempotencyKey.substring(0, 50), finalRef, 21600); // 6 hours
+    }
+    cache.put(semanticKey, finalRef, 1800); // 30 minutes
 
     return {
       success: true,
@@ -328,7 +368,7 @@ function doGet(e) {
   var safeStatus = {
     status: "active",
     service: "Mwangi Wangondu & Associates Consultation Dispatcher",
-    timestamp: Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd'T'HH:mm:ss'Z'")
+    timestamp: (new Date()).toISOString()
   };
 
   return ContentService.createTextOutput(JSON.stringify(safeStatus))
@@ -336,10 +376,35 @@ function doGet(e) {
 }
 
 // ============================================================================
-// HISTORICAL RECONCILIATION & ONE-CLICK BACKFILL UTILITY
+// HISTORICAL RECONCILIATION & SECURE BACKFILL UTILITY
 // ============================================================================
-function reconcileHistoricalLedger(isDryRun) {
+/**
+ * Imports historical consultation records from a secure JSON string directly provided
+ * in Apps Script editor or manual execution.
+ * Does NOT pull from public GitHub raw URLs to prevent silent zero-record migrations
+ * of sanitized public repository files.
+ *
+ * @param {string} recordsJsonString - Valid JSON array string of consultation records
+ * @param {boolean} isDryRun - When true, validates records without inserting into sheet
+ * @returns {object} Migration summary report
+ */
+function importHistoricalBackup(recordsJsonString, isDryRun) {
   var dryRun = (isDryRun === true);
+  if (!recordsJsonString || typeof recordsJsonString !== "string" || recordsJsonString.trim().length === 0) {
+    throw new Error("Missing recordsJsonString. You must supply the JSON array string from your secure local backup (data/backup/consultations_backup_20261025.json).");
+  }
+
+  var records;
+  try {
+    records = JSON.parse(recordsJsonString);
+  } catch (parseErr) {
+    throw new Error("Invalid JSON string supplied to importHistoricalBackup: " + parseErr.message);
+  }
+
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error("Zero records found in supplied JSON. Migration aborted to prevent data loss.");
+  }
+
   var sheet = getOrCreateSheet();
   var lastRow = sheet.getLastRow();
   
@@ -351,16 +416,16 @@ function reconcileHistoricalLedger(isDryRun) {
     }
   }
 
-  var sourceUrl = "https://raw.githubusercontent.com/Mwangi-Wangondu-Associates/Mwangi-Wangondu-Associates/main/data/consultations.json";
-  var res = UrlFetchApp.fetch(sourceUrl, { muteHttpExceptions: true });
-  if (res.getResponseCode() !== 200) throw new Error("Fetch failed: HTTP " + res.getResponseCode());
-
-  var records = JSON.parse(res.getContentText());
   var inserted = 0;
   var skippedDuplicates = 0;
+  var validated = 0;
 
-  for (var k = records.length - 1; k >= 0; k--) {
+  for (var k = 0; k < records.length; k++) {
     var rec = records[k];
+    if (!rec.referenceCode) {
+      throw new Error("Record at index " + k + " is missing required 'referenceCode'. Migration aborted.");
+    }
+    validated++;
     if (existingRefs[rec.referenceCode]) {
       skippedDuplicates++;
     } else {
@@ -368,16 +433,16 @@ function reconcileHistoricalLedger(isDryRun) {
       if (!dryRun) {
         sheet.appendRow([
           rec.referenceCode,
-          rec.receivedAt || "",
+          rec.receivedAt || new Date().toISOString(),
           rec.fullName || rec.name || "",
           rec.email || "",
           rec.phone || "",
           rec.organization || "Not specified",
           rec.sector || "General",
           rec.serviceArea || rec.service || "",
-          rec.consultationMode || "In-Person",
-          rec.preferredDate || rec.date || "Flexible",
-          rec.preferredTimeWindow || rec.time || "Business Hours",
+          rec.consultationMode || "In-Person (Vision Plaza, Nairobi)",
+          rec.preferredDate || rec.date || "Flexible / Earliest Available",
+          rec.preferredTimeWindow || rec.time || "Business Hours (08:30 - 17:00 EAT)",
           rec.message || "",
           rec.status || "Received",
           "Historical Migration"
@@ -386,8 +451,21 @@ function reconcileHistoricalLedger(isDryRun) {
       }
     }
   }
-  SpreadsheetApp.flush();
-  var summary = (dryRun ? "[DRY RUN] " : "[APPLIED] ") + "Total: " + records.length + ", Skipped: " + skippedDuplicates + ", Inserted: " + inserted;
-  Logger.log(summary);
+
+  if (!dryRun) {
+    SpreadsheetApp.flush();
+  }
+
+  var summary = {
+    status: "success",
+    mode: dryRun ? "DRY_RUN" : "APPLIED",
+    totalSupplied: records.length,
+    validated: validated,
+    inserted: inserted,
+    skippedDuplicates: skippedDuplicates,
+    message: (dryRun ? "[DRY RUN] " : "[APPLIED] ") + "Validated: " + validated + ", Inserted: " + inserted + ", Skipped: " + skippedDuplicates
+  };
+  Logger.log(JSON.stringify(summary));
   return summary;
 }
+

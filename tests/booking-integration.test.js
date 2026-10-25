@@ -119,34 +119,70 @@ runTest('TEST 3: CSV Special Character & Multiline Escaping', () => {
 });
 
 // ============================================================================
-// TEST 4: Concurrency & Deduplication Logic
+// TEST 4: Concurrency & Deduplication Logic (Idempotency Key & Semantic Dedup)
 // ============================================================================
 runTest('TEST 4: Idempotent Submission Handling (Duplicate Prevention)', () => {
   const mockDatabase = [];
+  const mockCache = new Map();
 
-  function insertBooking(payload) {
-    // Check if reference already exists
-    const existing = mockDatabase.find(b => b.referenceCode === payload.referenceCode);
-    if (existing) {
-      return { success: true, status: 'confirmed', duplicate: true, referenceCode: existing.referenceCode };
+  function handleSubmission(payload) {
+    // 1. Check idempotency key in cache (fast retry deduplication)
+    if (payload.idempotencyKey && mockCache.has('idem_' + payload.idempotencyKey)) {
+      return {
+        success: true,
+        status: 'confirmed',
+        duplicate: true,
+        referenceCode: mockCache.get('idem_' + payload.idempotencyKey),
+        message: 'Consultation previously registered and confirmed in practice ledger (idempotent retry).'
+      };
     }
 
-    // Check if identical client inquiry was submitted in last 15 minutes
-    const duplicateSubmission = mockDatabase.find(b => 
-      b.email === payload.email && 
-      b.serviceArea === payload.serviceArea && 
-      b.preferredDate === payload.preferredDate
-    );
-    if (duplicateSubmission) {
-      return { success: true, status: 'confirmed', duplicate: true, referenceCode: duplicateSubmission.referenceCode };
+    // 2. Check semantic deduplication cache (email + serviceArea + preferredDate within 30 min)
+    const semanticKey = 'dedup_' + (payload.email + '|' + payload.serviceArea + '|' + payload.preferredDate).toLowerCase();
+    if (mockCache.has(semanticKey)) {
+      return {
+        success: true,
+        status: 'confirmed',
+        duplicate: true,
+        referenceCode: mockCache.get(semanticKey),
+        message: 'An identical consultation booking was recently confirmed for this client.'
+      };
     }
 
-    mockDatabase.push({ ...payload });
-    return { success: true, status: 'confirmed', duplicate: false, referenceCode: payload.referenceCode };
+    // 3. Check if reference already exists in ledger
+    if (payload.referenceCode) {
+      const existing = mockDatabase.find(b => b.referenceCode === payload.referenceCode);
+      if (existing) {
+        return {
+          success: true,
+          status: 'confirmed',
+          duplicate: true,
+          referenceCode: existing.referenceCode,
+          message: 'Consultation previously registered and confirmed in practice ledger.'
+        };
+      }
+    }
+
+    // Insert new record
+    const finalRef = payload.referenceCode || 'MWA-BK-202610-123456';
+    mockDatabase.push({ ...payload, referenceCode: finalRef });
+    if (payload.idempotencyKey) {
+      mockCache.set('idem_' + payload.idempotencyKey, finalRef);
+    }
+    mockCache.set(semanticKey, finalRef);
+
+    return {
+      success: true,
+      status: 'confirmed',
+      duplicate: false,
+      referenceCode: finalRef,
+      message: 'Consultation successfully registered with practice management desk.'
+    };
   }
 
   const initialPayload = {
-    referenceCode: 'MWA-BK-202610-9999',
+    idempotencyKey: 'IDEM-1729860000000-abc12345',
+    referenceCode: 'MWA-BK-202610-999999',
     fullName: 'Synthetic Test Client',
     email: 'synthetic.test@example.com',
     phone: '+254700000000',
@@ -154,17 +190,32 @@ runTest('TEST 4: Idempotent Submission Handling (Duplicate Prevention)', () => {
     preferredDate: '2026-11-01'
   };
 
-  // First submission: newly inserted
-  const firstRes = insertBooking(initialPayload);
-  assert.strictEqual(firstRes.success, true);
-  assert.strictEqual(firstRes.duplicate, false);
+  // Sub-case 1: Initial submission succeeds
+  const res1 = handleSubmission(initialPayload);
+  assert.strictEqual(res1.success, true);
+  assert.strictEqual(res1.duplicate, false);
+  assert.strictEqual(res1.referenceCode, 'MWA-BK-202610-999999');
   assert.strictEqual(mockDatabase.length, 1);
 
-  // Second immediate identical submission (double-click simulation): skipped duplicate
-  const secondRes = insertBooking(initialPayload);
-  assert.strictEqual(secondRes.success, true);
-  assert.strictEqual(secondRes.duplicate, true);
-  assert.strictEqual(mockDatabase.length, 1, 'Database row count must remain 1');
+  // Sub-case 2: Client network timeout retry with identical idempotencyKey
+  const res2 = handleSubmission(initialPayload);
+  assert.strictEqual(res2.success, true);
+  assert.strictEqual(res2.duplicate, true);
+  assert.strictEqual(res2.referenceCode, 'MWA-BK-202610-999999');
+  assert.strictEqual(mockDatabase.length, 1, 'Database row count must remain 1 on idempotent retry');
+
+  // Sub-case 3: Client submits again without reference or idempotencyKey (semantic deduplication)
+  const res3 = handleSubmission({
+    fullName: 'Synthetic Test Client',
+    email: 'synthetic.test@example.com',
+    phone: '+254700000000',
+    serviceArea: 'Audit, Assurance & Advisory',
+    preferredDate: '2026-11-01'
+  });
+  assert.strictEqual(res3.success, true);
+  assert.strictEqual(res3.duplicate, true);
+  assert.strictEqual(res3.referenceCode, 'MWA-BK-202610-999999');
+  assert.strictEqual(mockDatabase.length, 1, 'Database row count must remain 1 on semantic duplicate');
 });
 
 // ============================================================================
@@ -293,6 +344,110 @@ runTest('TEST 7: Anti-Abuse Safeguards (Honeypot & Shared Application Token)', (
   assert.strictEqual(humanRes.rejected, false);
 });
 
+// ============================================================================
+// TEST 8: Genuine UTC Timestamp Format & Instant Verification
+// ============================================================================
+runTest('TEST 8: Genuine UTC ISO-8601 Timestamp Generation and Offset Accuracy', () => {
+  const instant = new Date();
+  const utcString = instant.toISOString();
+
+  // Must match strict ISO-8601 UTC format: YYYY-MM-DDTHH:mm:ss.sssZ
+  assert.match(utcString, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'Timestamp must be standard ISO-8601 UTC with trailing Z');
+
+  // Verify that parsing the string recovers the exact millisecond instant
+  const parsedEpoch = Date.parse(utcString);
+  assert.strictEqual(parsedEpoch, instant.getTime(), 'Parsed UTC timestamp must equal original epoch instant with 0ms deviation');
+
+  // Demonstrate that defective combination of GMT+3 formatting with literal 'Z' caused a 3-hour distortion
+  // Previous defective pattern:
+  // e.g. at UTC 12:00:00, GMT+3 is 15:00:00. Defect appended 'Z' -> '...15:00:00Z', shifting recorded instant by +3 hours.
+  const now = new Date('2026-10-25T12:00:00.000Z');
+  const trueIso = now.toISOString();
+  assert.strictEqual(trueIso, '2026-10-25T12:00:00.000Z');
+  assert.strictEqual(new Date(trueIso).getUTCHours(), 12, 'True UTC must preserve UTC hour 12');
+});
+
+// ============================================================================
+// TEST 9: Historical Import Engine & Schema Validation
+// ============================================================================
+runTest('TEST 9: Historical Import Engine - Safety Gates & Schema Validation', () => {
+  function importHistoricalBackupLogic(recordsJsonString, isDryRun, existingRefs = new Set()) {
+    if (!recordsJsonString || typeof recordsJsonString !== 'string' || recordsJsonString.trim().length === 0) {
+      throw new Error('Missing recordsJsonString');
+    }
+    let records;
+    try {
+      records = JSON.parse(recordsJsonString);
+    } catch (err) {
+      throw new Error('Invalid JSON string: ' + err.message);
+    }
+    if (!Array.isArray(records) || records.length === 0) {
+      throw new Error('Zero records found in supplied JSON. Migration aborted to prevent data loss.');
+    }
+
+    let inserted = 0;
+    let skippedDuplicates = 0;
+    const insertedRows = [];
+
+    for (let k = 0; k < records.length; k++) {
+      const rec = records[k];
+      if (!rec.referenceCode) {
+        throw new Error(`Record at index ${k} is missing required 'referenceCode'`);
+      }
+      if (existingRefs.has(rec.referenceCode)) {
+        skippedDuplicates++;
+      } else {
+        inserted++;
+        if (!isDryRun) {
+          insertedRows.push(rec);
+          existingRefs.add(rec.referenceCode);
+        }
+      }
+    }
+
+    return {
+      mode: isDryRun ? 'DRY_RUN' : 'APPLIED',
+      totalSupplied: records.length,
+      inserted,
+      skippedDuplicates,
+      insertedRows
+    };
+  }
+
+  // Sub-case 1: Rejection of empty string
+  assert.throws(() => importHistoricalBackupLogic(''), /Missing recordsJsonString/);
+
+  // Sub-case 2: Rejection of invalid JSON
+  assert.throws(() => importHistoricalBackupLogic('{malformed: json}'), /Invalid JSON string/);
+
+  // Sub-case 3: Rejection of empty array (guarding against sanitized public file)
+  assert.throws(() => importHistoricalBackupLogic('[]'), /Zero records found in supplied JSON/);
+
+  // Sub-case 4: Rejection of record missing referenceCode
+  const badRecords = JSON.stringify([{ fullName: 'No Reference' }]);
+  assert.throws(() => importHistoricalBackupLogic(badRecords), /missing required 'referenceCode'/);
+
+  // Sub-case 5: Verification using actual 17-record backup
+  const backupPath = path.join(__dirname, '..', 'data', 'backup', 'consultations_backup_20261025.json');
+  const backupJsonString = fs.readFileSync(backupPath, 'utf8');
+
+  // Dry run
+  const dryRunRes = importHistoricalBackupLogic(backupJsonString, true);
+  assert.strictEqual(dryRunRes.mode, 'DRY_RUN');
+  assert.strictEqual(dryRunRes.totalSupplied, 17);
+  assert.strictEqual(dryRunRes.inserted, 17);
+  assert.strictEqual(dryRunRes.skippedDuplicates, 0);
+
+  // Applied run
+  const existingSet = new Set(['MWA-BK-202610-1579']); // Simulate 1 already existing in sheet
+  const appliedRes = importHistoricalBackupLogic(backupJsonString, false, existingSet);
+  assert.strictEqual(appliedRes.mode, 'APPLIED');
+  assert.strictEqual(appliedRes.totalSupplied, 17);
+  assert.strictEqual(appliedRes.inserted, 16);
+  assert.strictEqual(appliedRes.skippedDuplicates, 1);
+  assert.strictEqual(appliedRes.insertedRows.length, 16);
+});
+
 console.log('\n------------------------------------------------------------');
 console.log(`TEST SUMMARY: ${passCount} PASSED, ${failCount} FAILED`);
 console.log('------------------------------------------------------------');
@@ -300,3 +455,4 @@ console.log('------------------------------------------------------------');
 if (failCount > 0) {
   process.exit(1);
 }
+

@@ -1,26 +1,36 @@
 // ============================================================================
 // MWANGI WANGONDU & ASSOCIATES — POWER QUERY (M) INTEGRATION SPECIFICATION
 // Target Application: Microsoft Excel (Desktop / Microsoft 365 / OneDrive)
-// Authoritative Source: Mwangi Wangondu & Associates Google Sheets Ledger
+// Authoritative Source: Private Mwangi Wangondu & Associates Consultations Ledger
 // ============================================================================
-// INSTRUCTIONS TO CONFIGURE IN MICROSOFT EXCEL:
-// 1. In Excel, go to the "Data" tab -> "Get Data" -> "From Other Sources" -> "Blank Query".
-// 2. Click "Advanced Editor" in the Query Editor window.
-// 3. Paste this entire M code block into the Advanced Editor.
-// 4. Update the "SourceUrl" parameter below if your Google Sheet published URL changes.
-// 5. Click "Done", then "Close & Load" into an Excel Table.
-// 6. Under Data -> Queries & Connections -> Query Properties, check:
-//    - "Refresh every 5 minutes"
-//    - "Enable background refresh"
+// SECURITY & DATA PRIVACY NOTICE:
+// Direct unauthenticated Power Query Web.Contents() to private Google Sheets is
+// NOT SUPPORTED by Microsoft without public publishing (which breaches client confidentiality).
+// DO NOT publish the Google Sheet to the web via "pub?output=csv".
+//
+// RECOMMENDED SECURE INTEGRATION ARCHITECTURES:
+//
+// [OPTION 1 - RECOMMENDED] Microsoft Power Automate Cloud Flow:
+// 1. Create an automated cloud flow triggered when a new row is appended to the Google Sheet.
+// 2. Action: "Insert row into an Excel Table" located in OneDrive / SharePoint:
+//    "Mwangi Wangondu & Associates Consultations.xlsx" -> Table "ConsultationsTable".
+// 3. This maintains real-time synchronization under end-to-end Microsoft 365 authentication
+//    with ZERO public web exposure.
+//
+// [OPTION 2] Internal Secure CSV Sync / Local File Connection:
+// 1. Maintain an authenticated export or sync file in your secure OneDrive folder:
+//    e.g. "C:\Users\<User>\OneDrive - Mwangi Wangondu & Associates\Ledger\consultations_internal.csv"
+// 2. Point this Power Query script to the internal OneDrive file path or SharePoint document library.
 // ============================================================================
 
 let
-    // 1. SOURCE URL: Published CSV feed from your Google Sheet (or secure internal endpoint)
-    SourceUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlej4TP7UJGdgxQa_Wo_sZwNY86L_mTByF5lzov2v8gFMNFq4Z7Mc2xO65lKbU-z2KDsSv6SJ7Ezkq/pub?output=csv",
+    // 1. SECURE SOURCE PATH: Configure to your local OneDrive sync folder or SharePoint URL
+    // (Replace with your actual local OneDrive path or SharePoint File URL)
+    SourcePath = "C:\Users\User\OneDrive - Mwangi Wangondu & Associates\Ledger\consultations_internal.csv",
 
-    // 2. FETCH DOCUMENT: Uses QuoteStyle.Csv and UTF-8 encoding (prevents row breaks on commas/quotes in messages)
+    // 2. LOAD DATA: Uses Csv.Document with QuoteStyle.Csv to handle internal commas, quotes, and newlines
     SourceData = Csv.Document(
-        Web.Contents(SourceUrl),
+        File.Contents(SourcePath),
         [
             Delimiter = ",",
             Columns = 14,
@@ -29,10 +39,10 @@ let
         ]
     ),
 
-    // 3. PROMOTE HEADERS: Automatically sets row 1 as table column names
+    // 3. PROMOTE HEADERS: Uses row 1 as table column names
     PromotedHeaders = Table.PromoteHeaders(SourceData, [PromoteAllScalars = true]),
 
-    // 4. CLEAN AND TRIM TEXT: Removes leading/trailing whitespace across all text columns
+    // 4. CLEAN AND TRIM TEXT: Strips leading/trailing whitespace across identity columns
     CleanedColumns = Table.TransformColumns(PromotedHeaders, {
         {"Reference Code", Text.Trim, type text},
         {"Full Name", Text.Trim, type text},
@@ -40,10 +50,10 @@ let
         {"Telephone / WhatsApp", Text.Trim, type text}
     }),
 
-    // 5. ENFORCE DATA TYPES: Preserves string format for telephone numbers (stops Excel stripping leading 0 or +)
+    // 5. ENFORCE DATA TYPES: Preserves string format for phone numbers (prevents stripping leading + or 0)
     TypedTable = Table.TransformColumnTypes(CleanedColumns, {
         {"Reference Code", type text},
-        {"Timestamp (UTC+3)", type text},
+        {"Timestamp (UTC)", type text},
         {"Full Name", type text},
         {"Email Address", type text},
         {"Telephone / WhatsApp", type text},
@@ -58,10 +68,11 @@ let
         {"Source Channel", type text}
     }),
 
-    // 6. DEDUPLICATION: Ensures every booking reference appears exactly once in Excel
+    // 6. DEDUPLICATION: Ensures every booking reference appears exactly once in the Excel ledger
     DeduplicatedRows = Table.Distinct(TypedTable, {"Reference Code"}),
 
-    // 7. SORTING: Orders table chronologically with newest bookings at the top
-    SortedByTimestamp = Table.Sort(DeduplicatedRows, {{"Timestamp (UTC+3)", Order.Descending}})
+    // 7. CHRONOLOGICAL SORT: Orders newest bookings at the top by UTC timestamp
+    SortedByTimestamp = Table.Sort(DeduplicatedRows, {{"Timestamp (UTC)", Order.Descending}})
 in
     SortedByTimestamp
+
