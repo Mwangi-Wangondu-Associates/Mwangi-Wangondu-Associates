@@ -471,19 +471,26 @@
           return;
         }
 
+        // STATE 1: SUBMITTING
         isBusy = true;
         const submitBtn = form.querySelector('button[type="submit"]');
         const origBtnText = submitBtn ? submitBtn.innerHTML : 'Register Consultation Request';
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Registering Appointment...';
+          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Transmitting to Practice Ledger...';
+        }
+
+        if (feedbackBox) {
+          feedbackBox.className = 'form-feedback-box info';
+          feedbackBox.style.display = 'block';
+          feedbackBox.innerHTML = '<div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm text-primary"></span> <span>Connecting to Mwangi Wangondu &amp; Associates advisory desk...</span></div>';
         }
 
         const now = new Date();
-        const randomRef = 'MWA-BK-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + '-' + Math.floor(1000 + Math.random() * 9000);
+        const clientRef = 'MWA-BK-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + '-' + Math.floor(100000 + Math.random() * 900000);
 
         const bookingData = {
-          referenceCode: randomRef,
+          referenceCode: clientRef,
           name: fullName,
           fullName: fullName,
           email: email,
@@ -499,17 +506,11 @@
           preferredTimeWindow: preferredTimeWindow || 'Business Hours (08:30 - 17:00 EAT)',
           message: message,
           receivedAt: now.toISOString(),
-          status: 'Received'
+          status: 'Received',
+          source: 'Website Booking Form'
         };
 
-        // Cache immediately in browser local storage
-        try {
-          const list = JSON.parse(localStorage.getItem('mwa_consultations') || '[]');
-          list.unshift(bookingData);
-          localStorage.setItem('mwa_consultations', JSON.stringify(list.slice(0, 50)));
-        } catch (_) {}
-
-        function showSuccessReceipt(refCode) {
+        function renderConfirmedReceipt(confirmedRef, noticeMsg) {
           if (!feedbackBox) return;
           feedbackBox.className = 'form-feedback-box success';
           feedbackBox.style.display = 'block';
@@ -521,74 +522,181 @@
             <p class="mb-2">Thank you, <strong>${escapeText(fullName)}</strong>. Your advisory consultation request has been officially registered with Mwangi Wangondu &amp; Associates.</p>
             <div class="receipt-box p-3 bg-light rounded border mb-2">
               <div class="row g-2 small">
-                <div class="col-sm-6"><strong>Reference Number:</strong> <span class="badge bg-primary text-white">${escapeText(refCode)}</span></div>
-                <div class="col-sm-6"><strong>Status:</strong> <span class="badge bg-success text-white"><i class="bi bi-check2-circle me-1"></i> Registered &amp; Dispatched</span></div>
+                <div class="col-sm-6"><strong>Reference Number:</strong> <span class="badge bg-primary text-white">${escapeText(confirmedRef)}</span></div>
+                <div class="col-sm-6"><strong>Status:</strong> <span class="badge bg-success text-white"><i class="bi bi-check2-circle me-1"></i> Registered &amp; Verified</span></div>
                 <div class="col-sm-6"><strong>Service Area:</strong> ${escapeText(serviceArea)}</div>
                 <div class="col-sm-6"><strong>Consultation Mode:</strong> ${escapeText(consultationMode || 'In-Person / Virtual')}</div>
                 <div class="col-sm-6"><strong>Preferred Schedule:</strong> ${escapeText(preferredDate || 'Flexible / Earliest Available')} (${escapeText(preferredTimeWindow || 'Business Hours')})</div>
                 <div class="col-sm-6"><strong>Client Email:</strong> ${escapeText(email)}</div>
               </div>
             </div>
+            ${noticeMsg ? `<div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i> ${escapeText(noticeMsg)}</div>` : ''}
             <div class="mt-2 small text-muted">
-              <i class="bi bi-info-circle me-1"></i> A Lead Partner or Senior Associate will contact you shortly via <strong>${escapeText(email)}</strong> or <strong>${escapeText(phone)}</strong> to confirm appointment details.
+              <i class="bi bi-telephone me-1"></i> A Lead Partner or Senior Associate will contact you shortly via <strong>${escapeText(email)}</strong> or <strong>${escapeText(phone)}</strong> to confirm appointment details.
             </div>
           `;
           form.reset();
           feedbackBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Render confirmation immediately so client never waits
-        showSuccessReceipt(randomRef);
-
-        // Transmit in background to server
-        try {
-          const res = await fetch('/api/consultation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(bookingData)
-          });
-          if (res.ok) {
-            const ctype = res.headers.get('content-type') || '';
-            if (ctype.includes('application/json')) {
-              const json = await res.json();
-              if (json && json.referenceCode && json.referenceCode !== randomRef) {
-                showSuccessReceipt(json.referenceCode);
-              }
-            }
-          }
-        } catch (postErr) {
-          console.warn('Background server sync noted, booking remains confirmed:', postErr);
+        function renderFailureAlert(errorMessage, canRetry) {
+          if (!feedbackBox) return;
+          feedbackBox.className = 'form-feedback-box error';
+          feedbackBox.style.display = 'block';
+          feedbackBox.innerHTML = `
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-exclamation-triangle-fill fs-4 text-danger"></i>
+              <strong class="fs-5 text-danger">Booking Transmission Failed</strong>
+            </div>
+            <p class="mb-2 text-dark small">${escapeText(errorMessage)}</p>
+            <div class="p-3 bg-light rounded border small mb-2">
+              <strong>Direct Appointment Booking Contacts:</strong>
+              <div class="mt-1"><i class="bi bi-telephone-fill text-primary me-2"></i> Phone / WhatsApp: <a href="tel:+254723606653" class="fw-bold">+254 723606653</a> / <a href="tel:+254711223344">+254 711 223344</a></div>
+              <div><i class="bi bi-envelope-fill text-primary me-2"></i> Direct Partner Email: <a href="mailto:mwangiemmah2023@gmail.com" class="fw-bold">mwangiemmah2023@gmail.com</a></div>
+              <div><i class="bi bi-geo-alt-fill text-primary me-2"></i> Practice Office: Vision Plaza, Nairobi &bull; Kitengela Branch</div>
+            </div>
+            ${canRetry ? '<p class="text-muted small mb-0">You may also retry submitting below.</p>' : ''}
+          `;
+          feedbackBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // Also mirror directly to Google Apps Script Webhook so Google Sheets receives it even on static hosting / GitHub Pages
+        function renderTimeoutNotice(referenceCode) {
+          if (!feedbackBox) return;
+          feedbackBox.className = 'form-feedback-box warning';
+          feedbackBox.style.display = 'block';
+          feedbackBox.innerHTML = `
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-clock-history fs-4 text-warning"></i>
+              <strong class="fs-5 text-dark">Submission Pending Confirmation</strong>
+            </div>
+            <p class="small text-muted mb-2">
+              Your appointment request was dispatched under reference <strong>${escapeText(referenceCode)}</strong>, but the verification receipt timed out over the network.
+            </p>
+            <div class="small p-2 bg-light rounded border mb-2">
+              <strong>Please do not submit repeatedly.</strong> If your browser experienced a network interruption, our practice desk may already have logged your request.
+            </div>
+            <div class="small text-muted">
+              To immediately confirm appointment placement, please call or WhatsApp <a href="tel:+254723606653" class="fw-bold text-primary">+254 723606653</a> quoting reference <strong>${escapeText(referenceCode)}</strong>.
+            </div>
+          `;
+          feedbackBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // DISPATCH ENGINE: Identifies available endpoint and enforces real server response
+        const webhookUrl = 'https://script.google.com/macros/s/AKfycbwTMT789GYddjaWkhWDQKQNM5eukC3Mdgwwr1d8g26xXsHY2Se3RGPUg8u4CrnGexNL/exec';
+        let submissionSuccess = false;
+        let confirmedReference = clientRef;
+        let finalMessage = '';
+
         try {
-          const webhookUrl = 'https://script.google.com/macros/s/AKfycbwTMT789GYddjaWkhWDQKQNM5eukC3Mdgwwr1d8g26xXsHY2Se3RGPUg8u4CrnGexNL/exec';
-          const targetUrl = new URL(webhookUrl);
-          targetUrl.searchParams.set('name', bookingData.fullName);
-          targetUrl.searchParams.set('email', bookingData.email);
-          targetUrl.searchParams.set('phone', bookingData.phone);
-          targetUrl.searchParams.set('service', bookingData.serviceArea);
-          targetUrl.searchParams.set('date', bookingData.preferredDate);
-          targetUrl.searchParams.set('time', bookingData.preferredTimeWindow);
-          targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
-          targetUrl.searchParams.set('organization', bookingData.organization || 'Not specified');
-          targetUrl.searchParams.set('mode', bookingData.consultationMode || 'In-Person');
-          if (bookingData.message) targetUrl.searchParams.set('message', bookingData.message);
+          // Attempt 1: If hosted on environment with active /api backend, attempt primary REST endpoint
+          let apiAvailable = false;
+          try {
+            const apiCheckController = new AbortController();
+            const apiTimeout = setTimeout(() => apiCheckController.abort(), 3000);
+            const res = await fetch('/api/consultation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify(bookingData),
+              signal: apiCheckController.signal
+            });
+            clearTimeout(apiTimeout);
 
-          // Use simple text/plain to avoid preflight CORS rejections in browsers
-          fetch(targetUrl.toString(), {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(bookingData)
-          }).catch(() => {});
+            if (res.ok) {
+              const resData = await res.json();
+              if (resData && (resData.success || resData.status === 'confirmed')) {
+                submissionSuccess = true;
+                confirmedReference = resData.referenceCode || clientRef;
+                finalMessage = resData.message || '';
+                apiAvailable = true;
+              }
+            }
+          } catch (_) {
+            apiAvailable = false; // Expected on static GitHub Pages hosting
+          }
 
-          // Secondary GET dispatch ensures execution even if POST is filtered on mobile/corporate firewalls
-          fetch(targetUrl.toString(), {
-            method: 'GET',
-            mode: 'no-cors'
-          }).catch(() => {});
-        } catch (_) {} finally {
+          // Attempt 2: If primary API is not active (GitHub Pages static host), dispatch directly to Google Apps Script
+          if (!apiAvailable) {
+            const gasController = new AbortController();
+            const gasTimeout = setTimeout(() => gasController.abort(), 12000);
+
+            try {
+              // Prepare URL query parameters for guaranteed cross-origin support
+              const targetUrl = new URL(webhookUrl);
+              targetUrl.searchParams.set('fullName', bookingData.fullName);
+              targetUrl.searchParams.set('email', bookingData.email);
+              targetUrl.searchParams.set('phone', bookingData.phone);
+              targetUrl.searchParams.set('serviceArea', bookingData.serviceArea);
+              targetUrl.searchParams.set('organization', bookingData.organization);
+              targetUrl.searchParams.set('sector', bookingData.sector);
+              targetUrl.searchParams.set('consultationMode', bookingData.consultationMode);
+              targetUrl.searchParams.set('preferredDate', bookingData.preferredDate);
+              targetUrl.searchParams.set('preferredTimeWindow', bookingData.preferredTimeWindow);
+              targetUrl.searchParams.set('referenceCode', bookingData.referenceCode);
+              if (bookingData.message) targetUrl.searchParams.set('message', bookingData.message);
+
+              const gasResponse = await fetch(targetUrl.toString(), {
+                method: 'GET',
+                redirect: 'follow',
+                signal: gasController.signal
+              });
+              clearTimeout(gasTimeout);
+
+              const responseText = await gasResponse.text();
+
+              // Check if response redirected to Google Sign-In (401 access restricted)
+              if (responseText.includes('accounts.google.com') || responseText.includes('ServiceLogin')) {
+                throw new Error('Google Apps Script endpoint is currently restricted to private sign-in. Access configuration must be set to "Anyone" by firm administrator.');
+              }
+
+              let gasJson = {};
+              try {
+                gasJson = JSON.parse(responseText);
+              } catch {
+                if (gasResponse.ok && (responseText.includes('success') || responseText.includes('confirmed'))) {
+                  gasJson = { success: true, referenceCode: clientRef };
+                }
+              }
+
+              if (gasJson.success || gasJson.status === 'confirmed' || gasJson.status === 'ready') {
+                submissionSuccess = true;
+                confirmedReference = gasJson.referenceCode || clientRef;
+                finalMessage = gasJson.message || '';
+              } else if (gasJson.error) {
+                throw new Error(gasJson.error);
+              } else {
+                throw new Error('Endpoint returned an unverified response. Storage could not be confirmed.');
+              }
+
+            } catch (gasErr) {
+              clearTimeout(gasTimeout);
+              if (gasErr.name === 'AbortError') {
+                renderTimeoutNotice(clientRef);
+                return;
+              }
+              throw gasErr;
+            }
+          }
+
+          // STATE 3: CONFIRMED
+          if (submissionSuccess) {
+            // Save safe client backup in localStorage
+            try {
+              const list = JSON.parse(localStorage.getItem('mwa_consultations') || '[]');
+              bookingData.referenceCode = confirmedReference;
+              list.unshift(bookingData);
+              localStorage.setItem('mwa_consultations', JSON.stringify(list.slice(0, 50)));
+            } catch (_) {}
+
+            renderConfirmedReceipt(confirmedReference, finalMessage);
+          } else {
+            renderFailureAlert('The practice desk could not verify persistent storage for this request. Please call +254 723606653 to book directly.', true);
+          }
+
+        } catch (err) {
+          // STATE 4: FAILED
+          renderFailureAlert('Error connecting to advisory schedule: ' + (err.message || 'Network communication error. Please call +254 723606653 or email mwangiemmah2023@gmail.com.'), true);
+        } finally {
           isBusy = false;
           if (submitBtn) {
             submitBtn.disabled = false;
